@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOOM</title>
+  <style>
+    :root {
+      --bg: #1a1a1a;
+      --panel: #2a2a2a;
+      --orange: #FFA500;
+      --text: #ffffff;
+      --red: #cc2200;
+    }
+
+    * { -webkit-user-select: none; user-select: none; box-sizing: border-box; margin: 0; padding: 0; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+
+    html, body {
+      width: 100%; height: 100vh;
+      background: #000;
+      font-family: 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+      color: var(--text);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Title bar ──────────────────────────────────────────── */
+    #titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel);
+      padding: 6px 12px;
+      border-bottom: 2px solid var(--red);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    #titlebar .logo {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: var(--red);
+      text-shadow: 0 0 8px #ff330088;
+      font-style: italic;
+    }
+
+    #titlebar .subtitle {
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 2px;
+    }
+
+    #titlebar .controls {
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    #titlebar button {
+      padding: 4px 10px;
+      font-size: 11px;
+      background: #444;
+      color: var(--text);
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 1px;
+    }
+    #titlebar button:hover { background: #666; }
+    #titlebar button.close-btn {
+      background: #660000;
+      color: #fff;
+    }
+    #titlebar button.close-btn:hover { background: var(--red); }
+
+    /* ── Game container ─────────────────────────────────────── */
+    #game-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #dos-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Loading overlay ────────────────────────────────────── */
+    #loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 100;
+    }
+
+    #loading-overlay .doom-title {
+      font-size: 64px;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: 10px;
+      color: var(--red);
+      text-shadow: 0 0 30px #ff3300aa, 0 0 60px #ff330055;
+    }
+
+    #loading-overlay .loading-text {
+      font-size: 12px;
+      color: #888;
+      letter-spacing: 3px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    #progress-bar-container {
+      width: 300px;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #cc2200, #ff6600);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 3px;
+    }
+
+    #error-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 200;
+      padding: 40px;
+      text-align: center;
+    }
+
+    #error-overlay .err-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--red);
+      letter-spacing: 4px;
+    }
+
+    #error-overlay .err-msg {
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.8;
+      max-width: 500px;
+    }
+
+    #error-overlay .err-hint {
+      font-size: 11px;
+      color: #666;
+      font-style: italic;
+    }
+
+    #error-overlay button {
+      padding: 8px 20px;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      font-size: 12px;
+      font-family: inherit;
+      letter-spacing: 2px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    #error-overlay button:hover { background: #ff8c00; }
+
+    /* ── Controls hint ──────────────────────────────────────── */
+    #controls-hint {
+      background: var(--panel);
+      padding: 4px 12px;
+      border-top: 1px solid #333;
+      font-size: 10px;
+      color: #666;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+    #controls-hint span { color: #999; }
+    #controls-hint .key {
+      background: #444;
+      padding: 1px 5px;
+      border-radius: 2px;
+      color: #ccc;
+      font-size: 9px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body oncontextmenu="return false" ondragstart="return false">
+
+  <!-- Title bar -->
+  <div id="titlebar">
+    <div>
+      <div class="logo">DOOM</div>
+      <div class="subtitle">SHAREWARE · 1993 · ID SOFTWARE</div>
+    </div>
+    <div class="controls">
+      <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
+      <button class="close-btn" onclick="closeDialog()">✕ Close</button>
+    </div>
+  </div>
+
+  <!-- Game area -->
+  <div id="game-container">
+    <div id="dos-container"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+      <div class="doom-title">DOOM</div>
+      <div class="loading-text">INITIALIZING...</div>
+      <div id="progress-bar-container">
+        <div id="progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Error overlay -->
+    <div id="error-overlay">
+      <div class="err-title">DOOM FAILED</div>
+      <div class="err-msg" id="error-message">DOOM could not be initialized.</div>
+      <div class="err-hint" id="error-hint"></div>
+      <button onclick="location.reload()">↺ RETRY</button>
+    </div>
+  </div>
+
+  <!-- Controls hint -->
+  <div id="controls-hint">
+    <div>Move: <span class="key">↑↓←→</span> or <span class="key">W A S D</span></div>
+    <div>Fire: <span class="key">Ctrl</span></div>
+    <div>Open: <span class="key">Space</span></div>
+    <div>Run: <span class="key">Shift</span></div>
+    <div>Menu: <span class="key">Esc</span></div>
+    <div>Click game area to capture keyboard</div>
+  </div>
+
+  <!--
+    BUILD STEP: esbuild's inlineDoomAssetsPlugin replaces these two comments
+    with actual inline <script> tags containing the bundled assets.
+    __JSDOS_SCRIPT_PLACEHOLDER__   → js-dos.js runtime (inlined JS source)
+    __DOOM_BUNDLE_PLACEHOLDER__    → doom.jsdos as base64 const
+  -->
+  <!-- __JSDOS_SCRIPT_PLACEHOLDER__ -->
+  <!-- __DOOM_BUNDLE_PLACEHOLDER__ -->
+
+  <script>
+    // ── Messaging helpers ───────────────────────────────────────
+    function doSendMessage(message) {
+      if (window.webkit?.messageHandlers?.live)
+        window.webkit.messageHandlers.live.postMessage(message);
+      else if (window.chrome?.webview)
+        window.chrome.webview.postMessage(message);
+    }
+
+    function closeDialog() {
+      doSendMessage({ method: "close_and_send", params: [JSON.stringify({ closed: true })] });
+    }
+
+    // ── Progress / state helpers ─────────────────────────────────
+    function setProgress(pct, label) {
+      document.getElementById("progress-bar").style.width = pct + "%";
+      if (label) document.querySelector("#loading-overlay .loading-text").textContent = label;
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById("loading-overlay");
+      overlay.style.transition = "opacity 0.5s ease";
+      overlay.style.opacity = "0";
+      setTimeout(() => { overlay.style.display = "none"; }, 500);
+    }
+
+    function showError(msg, hint) {
+      document.getElementById("loading-overlay").style.display = "none";
+      const el = document.getElementById("error-overlay");
+      el.style.display = "flex";
+      if (msg) document.getElementById("error-message").textContent = msg;
+      if (hint) document.getElementById("error-hint").textContent = hint;
+    }
+
+    // ── Fullscreen ───────────────────────────────────────────────
+    function toggleFullscreen() {
+      const el = document.getElementById("game-container");
+      if (!document.fullscreenElement) {
+        (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      }
+    }
+
+    // ── Boot js-dos with the bundled DOOM WAD ───────────────────
+    window.addEventListener("load", function () {
+      try {
+        // Verify the js-dos runtime was inlined successfully
+        if (typeof Dos === "undefined") {
+          showError(
+            "js-dos runtime is missing from the bundle.",
+            "Re-run: node setup.js && node esbuild.js"
+          );
+          return;
+        }
+
+        // Verify the DOOM bundle constant was injected
+        if (typeof __DOOM_BUNDLE_B64__ === "undefined" || !__DOOM_BUNDLE_B64__) {
+          showError(
+            "DOOM bundle is missing from the extension.",
+            "Re-run: node setup.js && node esbuild.js"
+          );
+          return;
+        }
+
+        setProgress(20, "DECODING DOOM BUNDLE...");
+
+        // Decode the base64 bundle into a Uint8Array, then into a Blob URL
+        // so js-dos can fetch() it (it expects a URL, not raw bytes)
+        const binary = atob(__DOOM_BUNDLE_B64__);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/octet-stream" });
+        const bundleUrl = URL.createObjectURL(blob);
+
+        setProgress(40, "INITIALIZING DOS EMULATOR...");
+
+        const container = document.getElementById("dos-container");
+
+        const dos = Dos(container, {
+          url: bundleUrl,
+          autoStart: true,
+          onEvent: function (event, args) {
+            if (event === "ci-ready") {
+              setProgress(70, "LOADING DOOM WAD...");
+            } else if (event === "ci-frame") {
+              setProgress(100, "RIP AND TEAR!");
+              setTimeout(hideLoading, 400);
+              // Release the blob URL — it's loaded into WASM memory now
+              URL.revokeObjectURL(bundleUrl);
+            } else if (event === "error") {
+              showError(
+                "DOOM engine error: " + ((args && args.message) || "unknown"),
+                "Check the browser console for details."
+              );
+            }
+          }
+        });
+
+        // Safety fallback: hide loading after 20s regardless
+        setTimeout(function () {
+          const overlay = document.getElementById("loading-overlay");
+          if (overlay && overlay.style.display !== "none" && overlay.style.opacity !== "0") {
+            hideLoading();
+          }
+        }, 20000);
+
+      } catch (err) {
+        console.error("[Doom] Boot error:", err);
+        showError("Failed to start DOOM: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

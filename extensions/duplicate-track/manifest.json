@@ -1,0 +1,7 @@
+{
+  "name": "Duplicate Track",
+  "author": "Federico Pepe",
+  "entry": "dist/extension.js",
+  "version": "0.0.7",
+  "minimumApiVersion": "1.0.0"
+}

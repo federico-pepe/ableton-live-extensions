@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #2a2a2a;
+      --panel: #383838;
+      --accent: #FFA500;
+      --text: #FFF;
+      --border: #464646;
+      --drag-over: #FFA50033;
+      --input-bg: #2a2a2a;
+      --input-border: #464646;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Lucida Grande', sans-serif;
+      font-size: 12px;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title {
+      padding: 12px 16px;
+      font-weight: bold;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .content {
+      display: flex;
+      flex: 1;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel:last-of-type {
+      border-right: none;
+    }
+
+    .panel-title {
+      padding: 10px 12px;
+      font-weight: bold;
+      font-size: 11px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Left panel: arrangement order */
+    .left-panel {
+      border-right: 1px solid var(--border);
+    }
+
+    .arrangement-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .arrangement-item:hover {
+      background: rgba(255, 165, 0, 0.1);
+    }
+
+    .arrangement-item.drag-over {
+      background: var(--drag-over);
+      border-top: 2px solid var(--accent);
+    }
+
+    .drag-handle {
+      cursor: move;
+      color: #888;
+      flex-shrink: 0;
+    }
+
+    .arrangement-item-name {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .multiplier-input {
+      width: 40px;
+      padding: 4px 6px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 2px;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .multiplier-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .remove-btn {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .remove-btn:hover {
+      color: var(--accent);
+    }
+
+    /* Right panel: available scenes */
+    .right-panel {
+      flex: 1;
+    }
+
+    .scene-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+      transition: background 0.15s;
+      cursor: move;
+      draggable: true;
+    }
+
+    .scene-item:hover {
+      background: rgba(255, 165, 0, 0.1);
+    }
+
+    .scene-item.dragging {
+      opacity: 0.4;
+    }
+
+    .scene-name {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .add-btn {
+      padding: 4px 8px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-left: 8px;
+      transition: opacity 0.15s;
+    }
+
+    .add-btn:hover {
+      opacity: 0.85;
+    }
+
+    .add-btn:active {
+      opacity: 0.7;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 20px;
+      text-align: center;
+      color: #888;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    /* Footer buttons */
+    .footer {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      font-family: inherit;
+    }
+
+    .button:hover {
+      opacity: 0.85;
+    }
+
+    .button:active {
+      opacity: 0.7;
+    }
+
+    .button-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .button-secondary {
+      background: #555;
+      color: var(--text);
+    }
+
+    .button-reset {
+      background: #666;
+      color: var(--text);
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 8px;
+    }
+
+    .footer-right {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Scrollbar styling */
+    .panel-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .panel-content::-webkit-scrollbar-track {
+      background: var(--panel);
+    }
+
+    .panel-content::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    .panel-content::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">Session Arrangement Bridge</div>
+
+  <div class="content">
+    <!-- Left panel: arrangement order -->
+    <div class="panel left-panel">
+      <div class="panel-title">Arrangement Order</div>
+      <div class="panel-content" id="arrangement-list">
+        <div class="empty-state">Drag scenes from the right<br>to build your arrangement</div>
+      </div>
+    </div>
+
+    <!-- Right panel: available scenes -->
+    <div class="panel right-panel">
+      <div class="panel-title">Available Scenes</div>
+      <div class="panel-content" id="available-list"></div>
+    </div>
+  </div>
+
+  <!-- Footer with buttons -->
+  <div class="footer">
+    <div class="footer-left">
+      <button class="button button-reset" id="reset-btn">Reset</button>
+    </div>
+    <div class="footer-right">
+      <button class="button button-secondary" id="cancel-btn">Cancel</button>
+      <button class="button button-secondary" id="automatic-btn">Automatic</button>
+      <button class="button button-primary" id="create-btn">Create Arrangement</button>
+    </div>
+  </div>
+
+  <script>
+    // ────────────────────────────────────────────────────────────────────────
+    // Messaging
+    // ────────────────────────────────────────────────────────────────────────
+
+    function doSendMessage(msg) {
+      if (window.webkit?.messageHandlers?.live) {
+        window.webkit.messageHandlers.live.postMessage(msg);
+      } else if (window.chrome?.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    function closeWithResult(result) {
+      doSendMessage({ method: "close_and_send", params: [JSON.stringify(result)] });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // State
+    // ────────────────────────────────────────────────────────────────────────
+
+    const INITIAL_DATA = window.INITIAL_DATA || { scenes: [] };
+
+    let arrangement = []; // Array of { index: number, multiplier: number }
+    let draggedSourceIndex = null;
+    let draggedFromArrangement = false; // true if dragging from arrangement, false if from available
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Render
+    // ────────────────────────────────────────────────────────────────────────
+
+    function renderArrangement() {
+      const list = document.getElementById("arrangement-list");
+      if (arrangement.length === 0) {
+        list.innerHTML = '<div class="empty-state">Drag scenes from the right<br>to build your arrangement</div>';
+        return;
+      }
+
+      list.innerHTML = arrangement
+        .map((item, idx) => {
+          const scene = INITIAL_DATA.scenes[item.index];
+          return `
+            <div
+              class="arrangement-item"
+              draggable="true"
+              data-index="${idx}"
+            >
+              <div class="drag-handle">≡</div>
+              <div class="arrangement-item-name">${item.index + 1}. ${scene.name}</div>
+              <input
+                type="number"
+                class="multiplier-input"
+                data-index="${idx}"
+                value="${item.multiplier}"
+                min="1"
+                max="99"
+              />
+              <button class="remove-btn" data-index="${idx}">×</button>
+            </div>
+          `;
+        })
+        .join("");
+
+      // Attach event listeners to arrangement items
+      list.querySelectorAll(".arrangement-item").forEach((el, idx) => {
+        el.addEventListener("dragstart", (e) => onArrangementDragStart(e, idx));
+        el.addEventListener("dragend", (e) => onArrangementDragEnd(e));
+        el.addEventListener("dragover", (e) => onArrangementDragOver(e, idx));
+        el.addEventListener("drop", (e) => onArrangementDrop(e, idx));
+        el.addEventListener("dragleave", (e) => onArrangementDragLeave(e));
+      });
+
+      // Attach multiplier input listeners
+      list.querySelectorAll(".multiplier-input").forEach((input) => {
+        input.addEventListener("input", (e) => {
+          const idx = parseInt(e.target.getAttribute("data-index"));
+          let val = parseInt(e.target.value) || 1;
+          val = Math.max(1, Math.min(99, val));
+          e.target.value = val;
+          arrangement[idx].multiplier = val;
+        });
+        input.addEventListener("dragstart", (e) => e.stopPropagation());
+      });
+
+      // Attach remove button listeners
+      list.querySelectorAll(".remove-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt(e.target.getAttribute("data-index"));
+          arrangement.splice(idx, 1);
+          renderArrangement();
+        });
+        btn.addEventListener("dragstart", (e) => e.stopPropagation());
+      });
+    }
+
+    function renderAvailable() {
+      const list = document.getElementById("available-list");
+      list.innerHTML = INITIAL_DATA.scenes
+        .map((scene, idx) => {
+          return `
+            <div
+              class="scene-item"
+              draggable="true"
+              data-index="${idx}"
+            >
+              <div class="scene-name">${idx + 1}. ${scene.name}</div>
+              <button class="add-btn" data-index="${idx}">+ Add</button>
+            </div>
+          `;
+        })
+        .join("");
+
+      // Attach event listeners to available items
+      list.querySelectorAll(".scene-item").forEach((el) => {
+        el.addEventListener("dragstart", (e) => onAvailableDragStart(e));
+        el.addEventListener("dragend", (e) => onAvailableDragEnd(e));
+      });
+
+      // Attach add button listeners
+      list.querySelectorAll(".add-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const idx = parseInt(e.target.getAttribute("data-index"));
+          arrangement.push({ index: idx, multiplier: 1 });
+          renderArrangement();
+        });
+        btn.addEventListener("dragstart", (e) => e.stopPropagation());
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Drag: From Available to Arrangement
+    // ────────────────────────────────────────────────────────────────────────
+
+    function onAvailableDragStart(e) {
+      draggedSourceIndex = parseInt(e.currentTarget.getAttribute("data-index"));
+      draggedFromArrangement = false;
+      e.dataTransfer.effectAllowed = "copy";
+      e.currentTarget.classList.add("dragging");
+    }
+
+    function onAvailableDragEnd(e) {
+      draggedSourceIndex = null;
+      e.currentTarget.classList.remove("dragging");
+      document.querySelectorAll(".scene-item").forEach((el) => el.classList.remove("dragging"));
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Drag: Within Arrangement (Reordering)
+    // ────────────────────────────────────────────────────────────────────────
+
+    function onArrangementDragStart(e, idx) {
+      draggedSourceIndex = idx;
+      draggedFromArrangement = true;
+      e.dataTransfer.effectAllowed = "move";
+      setTimeout(() => e.currentTarget.classList.add("dragging"), 0);
+    }
+
+    function onArrangementDragEnd(e) {
+      draggedSourceIndex = null;
+      document.querySelectorAll(".arrangement-item").forEach((el) => {
+        el.classList.remove("dragging", "drag-over");
+      });
+    }
+
+    function onArrangementDragOver(e, idx) {
+      if (draggedSourceIndex === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = draggedFromArrangement ? "move" : "copy";
+
+      // Visual feedback
+      document.querySelectorAll(".arrangement-item").forEach((el, i) => {
+        el.classList.toggle("drag-over", i === idx && i !== draggedSourceIndex);
+      });
+    }
+
+    function onArrangementDragLeave(e) {
+      // Only remove drag-over if leaving the element entirely
+      if (e.target.classList.contains("arrangement-item")) {
+        e.target.classList.remove("drag-over");
+      }
+    }
+
+    function onArrangementDrop(e, dropIdx) {
+      e.preventDefault();
+      if (draggedSourceIndex === null) return;
+
+      if (draggedFromArrangement) {
+        // Reorder within arrangement
+        const [item] = arrangement.splice(draggedSourceIndex, 1);
+        arrangement.splice(dropIdx, 0, item);
+      } else {
+        // Add from available
+        arrangement.splice(dropIdx, 0, { index: draggedSourceIndex, multiplier: 1 });
+      }
+
+      draggedSourceIndex = null;
+      renderArrangement();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Arrangement list drop target (bottom)
+    // ────────────────────────────────────────────────────────────────────────
+
+    document.getElementById("arrangement-list").addEventListener("dragover", (e) => {
+      if (draggedSourceIndex === null) return;
+      if (draggedFromArrangement) return; // Only accept from available
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+
+    document.getElementById("arrangement-list").addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (draggedSourceIndex === null || draggedFromArrangement) return;
+      // Add to end of arrangement
+      arrangement.push({ index: draggedSourceIndex, multiplier: 1 });
+      draggedSourceIndex = null;
+      renderArrangement();
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Button Handlers
+    // ────────────────────────────────────────────────────────────────────────
+
+    document.getElementById("reset-btn").addEventListener("click", () => {
+      arrangement = [];
+      renderArrangement();
+    });
+
+    document.getElementById("cancel-btn").addEventListener("click", () => {
+      closeWithResult({ mode: "cancel" });
+    });
+
+    document.getElementById("automatic-btn").addEventListener("click", () => {
+      closeWithResult({ mode: "automatic" });
+    });
+
+    document.getElementById("create-btn").addEventListener("click", () => {
+      closeWithResult({ mode: "custom", order: arrangement });
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Init
+    // ────────────────────────────────────────────────────────────────────────
+
+    renderAvailable();
+    renderArrangement();
+  </script>
+</body>
+</html>

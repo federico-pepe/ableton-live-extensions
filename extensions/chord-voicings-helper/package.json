@@ -1,0 +1,21 @@
+{
+  "name": "chord-voicings-helper",
+  "version": "1.0.1",
+  "main": "dist/extension.js",
+  "scripts": {
+    "build": "node esbuild.js && tsc --noEmit",
+    "build:production": "node esbuild.js --production && tsc --noEmit",
+    "watch": "node esbuild.js --watch"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../../",
+    "tonal": "^6.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "vexflow": "^4.2.2",
+    "vexchords": "^1.2.0"
+  }
+}

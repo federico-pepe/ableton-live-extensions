@@ -1,0 +1,7 @@
+{
+  "name": "Track Creator",
+  "author": "Federico Pepe",
+  "entry": "./dist/extension.js",
+  "version": "0.0.6",
+  "minimumApiVersion": "1.0.0"
+}

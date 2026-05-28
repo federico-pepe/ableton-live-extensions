@@ -1,0 +1,21 @@
+{
+  "name": "duplicate-track",
+  "version": "0.0.6",
+  "description": "Duplicates a track and removes all clips from the duplicate",
+  "license": "ISC",
+  "author": "Federico Pepe",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../.."
+  }
+}

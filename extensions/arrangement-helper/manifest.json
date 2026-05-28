@@ -1,0 +1,7 @@
+{
+    "name": "Arrangement Helper",
+    "author": "Federico Pepe",
+    "entry": "dist/extension.js",
+    "version": "0.0.8",
+    "minimumApiVersion": "1.0.0"
+}

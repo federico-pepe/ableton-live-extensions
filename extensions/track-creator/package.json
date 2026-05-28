@@ -1,0 +1,21 @@
+{
+  "name": "track-creator",
+  "displayName": "Track Creator",
+  "author": "Federico Pepe",
+  "version": "0.0.6",
+  "main": "./dist/extension.js",
+  "engines": {
+    "ableton-extensions-api": ">=0.0.4"
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "build:prod": "node esbuild.js --production"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../../"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "typescript": "^5.9.3"
+  }
+}

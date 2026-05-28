@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arrangement Helper</title>
+  <style>
+    :root {
+      --bg:         #383838;
+      --surface:    #303030;
+      --surface-hi: #444444;
+      --surface-mid:#2C2C2C;
+      --accent:     #FFA500;
+      --accent-dim: #E09400;
+      --text:       #FFFFFF;
+      --text-dim:   #808080;
+      --text-mid:   #B0B0B0;
+      --border:     #1A1A1A;
+      --border-mid: #222222;
+      --input-bg:   #2C2C2C;
+      --danger:     #CC4444;
+      --drag-hi:    rgba(255, 165, 0, 0.1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'AbletonSansSmall', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, sans-serif;
+      font-size: 11px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 14px 14px 12px;
+      gap: 9px;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    .edit-badge {
+      font-size: 9px;
+      font-weight: bold;
+      color: #000;
+      background: var(--accent);
+      border-radius: 2px;
+      padding: 1px 5px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: none;
+    }
+
+    /* ── Section label ────────────────────────────────── */
+    .row-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── Divider ──────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); flex-shrink: 0; }
+
+    /* ── Preset buttons ───────────────────────────────── */
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+
+    .preset-btn {
+      padding: 3px 8px;
+      font-size: 9px;
+      font-family: inherit;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      color: rgba(0,0,0,0.75);
+      transition: filter 0.1s, transform 0.08s;
+    }
+
+    .preset-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .preset-btn:active { transform: translateY(0); }
+
+    /* ── Custom row ───────────────────────────────────── */
+    .custom-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .custom-row input[type="text"] {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--border-mid);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 8px;
+    }
+
+    .custom-row input[type="number"] {
+      width: 54px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-mid);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 6px;
+      text-align: center;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      outline: 1px solid var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── Button ───────────────────────────────────────── */
+    .btn {
+      padding: 5px 14px;
+      font-size: 11px;
+      font-family: inherit;
+      background: var(--accent);
+      color: #000000;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: bold;
+      letter-spacing: 0.02em;
+    }
+
+    .btn:hover { background: var(--accent-dim); }
+    .btn:active { filter: brightness(0.92); }
+    .btn.secondary {
+      background: var(--surface-hi);
+      color: var(--text-mid);
+      font-weight: normal;
+    }
+    .btn.secondary:hover { background: var(--border-mid); color: var(--text); }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── List header ──────────────────────────────────── */
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .total-label { font-size: 10px; color: var(--text-mid); }
+    .total-bars { color: var(--accent); font-weight: bold; }
+
+    /* ── Section list ─────────────────────────────────── */
+    #section-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-height: 0;
+    }
+
+    #section-list::-webkit-scrollbar { width: 4px; }
+    #section-list::-webkit-scrollbar-track { background: transparent; }
+    #section-list::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 2px; }
+
+    .empty-state {
+      color: var(--text-dim);
+      text-align: center;
+      padding: 20px 0;
+      font-style: italic;
+    }
+
+    /* ── Section item ─────────────────────────────────── */
+    .section-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      background: var(--surface);
+      border-radius: 2px;
+      border: 1px solid transparent;
+      cursor: grab;
+      user-select: none;
+      transition: background 0.08s;
+    }
+
+    .section-item:hover { background: var(--surface-hi); }
+    .section-item.drag-over { border-color: var(--accent); background: var(--drag-hi); }
+    .section-item.dragging { opacity: 0.3; }
+
+    .drag-handle {
+      color: var(--text-dim);
+      font-size: 13px;
+      cursor: grab;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .color-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      border: 1px solid rgba(0,0,0,0.45);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s;
+    }
+
+    .color-swatch:hover { transform: scale(1.2); }
+
+    .section-name-wrap { flex: 1; min-width: 0; }
+
+    .section-name-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 2px 4px;
+    }
+
+    .section-name-input:focus {
+      background: var(--input-bg);
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .bars-input {
+      width: 46px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-mid);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 2px 4px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .bars-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+    .bars-unit {
+      color: var(--text-dim);
+      font-size: 10px;
+      width: 22px;
+      flex-shrink: 0;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+      transition: color 0.1s;
+    }
+
+    .remove-btn:hover { color: var(--danger); }
+
+    /* ── Color picker popup ───────────────────────────── */
+    .color-popup {
+      position: fixed;
+      background: var(--surface-mid);
+      border: 1px solid var(--border-mid);
+      border-radius: 3px;
+      padding: 6px;
+      display: grid;
+      grid-template-columns: repeat(14, 18px);
+      gap: 2px;
+      z-index: 9999;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+
+    .color-popup .cp-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      border: 1px solid rgba(0,0,0,0.35);
+      cursor: pointer;
+      transition: transform 0.08s;
+    }
+
+    .color-popup .cp-swatch:hover {
+      transform: scale(1.25);
+      outline: 1px solid rgba(255,255,255,0.4);
+    }
+
+    /* ── Footer ───────────────────────────────────────── */
+    .options-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .options-row label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: color 0.1s;
+    }
+
+    .options-row label:hover { color: var(--text-mid); }
+
+    input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="title" id="dialog-title">Arrangement structure</div>
+      <div class="edit-badge" id="edit-badge">Editing</div>
+    </div>
+
+    <!-- Preset chips -->
+    <div>
+      <div class="row-label" style="margin-bottom:5px">Add section</div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="custom-row">
+      <input type="text" id="custom-name" placeholder="Custom name…" maxlength="32" />
+      <input type="number" id="custom-bars" value="8" min="1" max="999" />
+      <span style="color:var(--text-dim);font-size:10px;white-space:nowrap">bars</span>
+      <button class="btn" onclick="addCustom()">Add</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="list-header">
+      <div class="row-label">Sections</div>
+      <div class="total-label" id="total-label"><span class="total-bars">0</span> bars total</div>
+    </div>
+
+    <div id="section-list"></div>
+
+    <div class="divider"></div>
+
+    <div class="options-row">
+      <label>
+        <input type="checkbox" id="create-locators" checked />
+        Create locators at section start points
+      </label>
+    </div>
+
+    <div class="footer">
+      <button class="btn secondary" onclick="cancel()">Cancel</button>
+      <button class="btn" id="create-btn" onclick="create()" disabled>Create</button>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Messaging ──────────────────────────────────────────────────────────
+    function doSendMessage(msg) {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+        window.webkit.messageHandlers.live.postMessage(msg);
+      } else if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    function closeWithResult(result) {
+      doSendMessage({ method: "close_and_send", params: [JSON.stringify(result)] });
+    }
+
+    function cancel() { closeWithResult(null); }
+
+    // ── Ableton Live color palette (70 colors, 14 × 5) ────────────────────
+    const PALETTE = [
+      "#FD95A7", "#FDA43A", "#CB9834", "#F7F384", "#C0F932", "#32FD42", "#39FDAA",
+      "#65FEE8", "#8DC6FD", "#5682E1", "#93A9FC", "#D670E2", "#E3569F", "#FFFFFF",
+      "#FC393D", "#F46C20", "#98714E", "#FEEE4A", "#8BFD70", "#44C121", "#1EBEAF",
+      "#31E9FD", "#22A5EB", "#127EBE", "#8870E1", "#B579C4", "#FD42D2", "#D0D0D0",
+      "#E0685D", "#FDA378", "#D2AC75", "#EDFEB2", "#D2E39C", "#BACF79", "#9CC38F",
+      "#D5FDE2", "#CEF1F8", "#B9C2E2", "#CDBCE3", "#AE9AE3", "#E5DCE1", "#A9A9A9",
+      "#C5928C", "#B68259", "#98836B", "#BFB96E", "#A6BC25", "#7EAF52", "#8AC2BA",
+      "#9CB3C3", "#86A5C1", "#8494CA", "#A596B4", "#BEA0BD", "#BB7296", "#7B7B7B",
+      "#AD3436", "#A75135", "#714F42", "#DAC229", "#85952B", "#559E38", "#1B9B8E",
+      "#266383", "#1B3393", "#3154A0", "#624EAB", "#A24EAB", "#CA326E", "#3C3C3C",
+    ];
+
+    // ── Preset section definitions ─────────────────────────────────────────
+    const PRESETS = [
+      { name: "INTRO",      bars: 8,  color: "#5682E1" },
+      { name: "VERSE",      bars: 16, color: "#22A5EB" },
+      { name: "PRE-CHORUS", bars: 8,  color: "#1EBEAF" },
+      { name: "CHORUS",     bars: 16, color: "#FC393D" },
+      { name: "BRIDGE",     bars: 8,  color: "#8870E1" },
+      { name: "BREAKDOWN",  bars: 8,  color: "#7B7B7B" },
+      { name: "SOLO",       bars: 8,  color: "#FEEE4A" },
+      { name: "BUILD",      bars: 8,  color: "#F46C20" },
+      { name: "DROP",       bars: 16, color: "#AD3436" },
+      { name: "HOOK",       bars: 8,  color: "#E3569F" },
+      { name: "REFRAIN",    bars: 8,  color: "#44C121" },
+      { name: "OUTRO",      bars: 8,  color: "#A9A9A9" },
+    ];
+
+    // ── Initial data injected by extension ────────────────────────────────
+    var INITIAL_DATA = window.INITIAL_DATA || { sections: [], nextId: 0, isEditing: false };
+
+    // ── State ──────────────────────────────────────────────────────────────
+    var sections = INITIAL_DATA.sections.map(function(s) {
+      return { id: s.id, name: s.name, bars: s.bars, color: s.color };
+    });
+    var nextId = INITIAL_DATA.nextId;
+    var activePopup = null;
+    var dragSrcId = null;
+
+    // ── Build preset buttons ───────────────────────────────────────────────
+    var presetsEl = document.getElementById("presets");
+    PRESETS.forEach(function(p) {
+      var btn = document.createElement("button");
+      btn.className = "preset-btn";
+      btn.textContent = p.name;
+      btn.style.backgroundColor = p.color;
+      btn.onclick = function() { addSection(p.name, p.bars, p.color); };
+      presetsEl.appendChild(btn);
+    });
+
+    // ── Section management ─────────────────────────────────────────────────
+    function addSection(name, bars, color) {
+      sections.push({ id: nextId++, name: name, bars: parseInt(bars) || 8, color: color });
+      render();
+    }
+
+    function addCustom() {
+      var nameEl = document.getElementById("custom-name");
+      var name = nameEl.value.trim();
+      if (!name) { nameEl.focus(); return; }
+      var bars = parseInt(document.getElementById("custom-bars").value) || 8;
+      addSection(name.toUpperCase(), bars, "#FFA500");
+      nameEl.value = "";
+      nameEl.focus();
+    }
+
+    function removeSection(id) {
+      sections = sections.filter(function(s) { return s.id !== id; });
+      render();
+    }
+
+    function updateName(id, name) {
+      var s = sections.find(function(s) { return s.id === id; });
+      if (s) s.name = name;
+      updateTotalAndTimeline();
+    }
+
+    function updateBars(id, val) {
+      var s = sections.find(function(s) { return s.id === id; });
+      if (s) s.bars = Math.max(1, parseInt(val) || 1);
+      updateTotalAndTimeline();
+    }
+
+    function setColor(id, color) {
+      var s = sections.find(function(s) { return s.id === id; });
+      if (s) { s.color = color; render(); }
+    }
+
+    // ── Drag and drop ──────────────────────────────────────────────────────
+    function onDragStart(e, id) {
+      dragSrcId = id;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(id));
+      setTimeout(function() {
+        var el = document.querySelector('[data-id="' + id + '"]');
+        if (el) el.classList.add("dragging");
+      }, 0);
+    }
+
+    function onDragEnd() {
+      dragSrcId = null;
+      document.querySelectorAll(".section-item").forEach(function(el) {
+        el.classList.remove("dragging", "drag-over");
+      });
+    }
+
+    function onDragOver(e, id) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      document.querySelectorAll(".section-item").forEach(function(el) {
+        el.classList.remove("drag-over");
+      });
+      if (dragSrcId !== null && id !== dragSrcId) {
+        var el = document.querySelector('[data-id="' + id + '"]');
+        if (el) el.classList.add("drag-over");
+      }
+    }
+
+    function onDrop(e, targetId) {
+      e.preventDefault();
+      if (dragSrcId === null || dragSrcId === targetId) return;
+      var srcIdx = sections.findIndex(function(s) { return s.id === dragSrcId; });
+      var tgtIdx = sections.findIndex(function(s) { return s.id === targetId; });
+      if (srcIdx === -1 || tgtIdx === -1) return;
+      var moved = sections.splice(srcIdx, 1)[0];
+      sections.splice(tgtIdx, 0, moved);
+      dragSrcId = null;
+      render();
+    }
+
+    // ── Color picker popup ─────────────────────────────────────────────────
+    function openColorPicker(id, swatchEl) {
+      closePopup();
+      var popup = document.createElement("div");
+      popup.className = "color-popup";
+
+      PALETTE.forEach(function(hex) {
+        var sw = document.createElement("div");
+        sw.className = "cp-swatch";
+        sw.style.backgroundColor = hex;
+        sw.onclick = function(e) {
+          e.stopPropagation();
+          setColor(id, hex);
+          closePopup();
+        };
+        popup.appendChild(sw);
+      });
+
+      var rect = swatchEl.getBoundingClientRect();
+      popup.style.left = rect.left + "px";
+      popup.style.top = (rect.bottom + 4) + "px";
+      document.body.appendChild(popup);
+      activePopup = popup;
+
+      setTimeout(function() {
+        document.addEventListener("click", closePopup, { once: true });
+      }, 0);
+    }
+
+    function closePopup() {
+      if (activePopup) { activePopup.remove(); activePopup = null; }
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function updateTotalAndTimeline() {
+      var total = sections.reduce(function(sum, s) { return sum + s.bars; }, 0);
+      var lbl = document.getElementById("total-label");
+      lbl.innerHTML = '<span class="total-bars">' + total + '</span> bar' + (total !== 1 ? 's' : '') + ' total';
+      document.getElementById("create-btn").disabled = sections.length === 0;
+    }
+
+    function render() {
+      closePopup();
+      var list = document.getElementById("section-list");
+      list.innerHTML = "";
+
+      if (sections.length === 0) {
+        var empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No sections yet — add a preset or type a custom name above.";
+        list.appendChild(empty);
+        updateTotalAndTimeline();
+        return;
+      }
+
+      sections.forEach(function(section) {
+        var item = document.createElement("div");
+        item.className = "section-item";
+        item.draggable = true;
+        item.dataset.id = section.id;
+
+        item.addEventListener("dragstart", function(e) { onDragStart(e, section.id); });
+        item.addEventListener("dragend", onDragEnd);
+        item.addEventListener("dragover", function(e) { onDragOver(e, section.id); });
+        item.addEventListener("drop", function(e) { onDrop(e, section.id); });
+
+        var handle = document.createElement("span");
+        handle.className = "drag-handle";
+        handle.innerHTML = "&#8942;&#8942;";
+        handle.title = "Drag to reorder";
+
+        var swatch = document.createElement("div");
+        swatch.className = "color-swatch";
+        swatch.style.backgroundColor = section.color;
+        swatch.title = "Click to change color";
+        swatch.onclick = function(e) {
+          e.stopPropagation();
+          openColorPicker(section.id, swatch);
+        };
+
+        var nameWrap = document.createElement("div");
+        nameWrap.className = "section-name-wrap";
+        var nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.className = "section-name-input";
+        nameInput.value = section.name;
+        nameInput.maxLength = 32;
+        nameInput.addEventListener("input", function() { updateName(section.id, nameInput.value); });
+        nameInput.addEventListener("dragstart", function(e) { e.stopPropagation(); });
+        nameWrap.appendChild(nameInput);
+
+        var barsInput = document.createElement("input");
+        barsInput.type = "number";
+        barsInput.className = "bars-input";
+        barsInput.value = section.bars;
+        barsInput.min = 1;
+        barsInput.max = 999;
+        barsInput.addEventListener("input", function() { updateBars(section.id, barsInput.value); });
+        barsInput.addEventListener("dragstart", function(e) { e.stopPropagation(); });
+
+        var barsUnit = document.createElement("span");
+        barsUnit.className = "bars-unit";
+        barsUnit.textContent = "bars";
+
+        var removeBtn = document.createElement("button");
+        removeBtn.className = "remove-btn";
+        removeBtn.innerHTML = "&times;";
+        removeBtn.title = "Remove section";
+        removeBtn.onclick = function() { removeSection(section.id); };
+
+        item.append(handle, swatch, nameWrap, barsInput, barsUnit, removeBtn);
+        list.appendChild(item);
+      });
+
+      updateTotalAndTimeline();
+    }
+
+    // ── Create ─────────────────────────────────────────────────────────────
+    function create() {
+      if (sections.length === 0) return;
+      var createLocators = document.getElementById("create-locators").checked;
+      closeWithResult({
+        sections: sections.map(function(s) {
+          return {
+            id: s.id,
+            name: s.name || "Section",
+            bars: Math.max(1, s.bars || 8),
+            color: parseInt(s.color.replace("#", ""), 16),
+          };
+        }),
+        createLocators: createLocators,
+      });
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────────────
+    document.getElementById("custom-name").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") addCustom();
+    });
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") cancel();
+    });
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    render();
+    if (INITIAL_DATA.isEditing) {
+      document.getElementById("dialog-title").textContent = "Edit arrangement structure";
+      document.getElementById("edit-badge").style.display = "inline-block";
+      document.getElementById("create-btn").textContent = "Update";
+    }
+  </script>
+</body>
+</html>

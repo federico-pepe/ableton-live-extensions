@@ -1,0 +1,7 @@
+{
+  "name": "Chord Voicing Helper",
+  "author": "Federico Pepe",
+  "entry": "dist/extension.js",
+  "version": "1.0.2",
+  "minimumApiVersion": "1.0.0"
+}

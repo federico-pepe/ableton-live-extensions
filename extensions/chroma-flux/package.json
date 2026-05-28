@@ -1,0 +1,12 @@
+{
+  "main": "dist/extension.js",
+  "scripts": {
+    "build": "node esbuild.js"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../../"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
+}

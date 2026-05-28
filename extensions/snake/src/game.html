@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Snake</title>
+  <script>
+    function doSendMessage(message) {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+        window.webkit.messageHandlers.live.postMessage(message);
+      } else if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(message);
+      }
+    }
+
+    function closeWithResult(result) {
+      doSendMessage({ method: "close_and_send", params: [JSON.stringify(result)] });
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 440px;
+      height: 420px;
+      background: #9bbc0f;
+      font-family: monospace;
+      color: #0f380f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 400px;
+      padding-bottom: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    canvas {
+      display: block;
+      border: 3px solid #0f380f;
+    }
+
+    #footer {
+      height: 60px;
+      width: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #hint {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    #game-over {
+      display: none;
+      text-align: center;
+    }
+
+    #game-over p {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 5px 14px;
+      font-size: 11px;
+      font-family: monospace;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      background: #FFA500;
+      color: #000;
+      font-weight: bold;
+    }
+
+    button:hover { background: #FF8C00; }
+
+    button.secondary {
+      background: #306230;
+      color: #9bbc0f;
+    }
+
+    button.secondary:hover { background: #0f380f; }
+  </style>
+</head>
+
+<body>
+  <div id="header">
+    <span>SNAKE</span>
+    <span id="score-display">SCORE: 0</span>
+  </div>
+  <canvas id="game" width="400" height="300"></canvas>
+  <div id="footer">
+    <div id="hint">Press any key to start</div>
+    <div id="game-over">
+      <p>GAME OVER</p>
+      <div class="btn-row">
+        <button class="secondary" onclick="closeWithResult(null)">Discard</button>
+        <button onclick="saveAndClose()">Save Notes to Live</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLS = 20, ROWS = 15, CELL = 20;
+    const C_BG    = '#9bbc0f';
+    const C_DARK  = '#0f380f';
+    const C_MID   = '#306230';
+    const C_LIGHT = '#8bac0f';
+
+    // C major pentatonic: row 0 (top) = highest pitch, row 14 (bottom) = lowest
+    // Ascending pitches: 48 50 52 55 57 60 62 64 67 69 72 74 76 79 81 (C3 → A5)
+    const PITCH_MAP = [81, 79, 76, 74, 72, 69, 67, 64, 62, 60, 57, 55, 52, 50, 48];
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    let state = 'start'; // 'start' | 'playing' | 'over'
+    let snake, dir, nextDir, apple, score, notes, appleIndex, gameInterval;
+
+    function initGame() {
+      snake = [{ x: 10, y: 7 }, { x: 9, y: 7 }, { x: 8, y: 7 }];
+      dir = { x: 1, y: 0 };
+      nextDir = { x: 1, y: 0 };
+      score = 0;
+      notes = [];
+      appleIndex = 0;
+      document.getElementById('score-display').textContent = 'SCORE: 0';
+      apple = randomApple();
+    }
+
+    function randomApple() {
+      let pos;
+      do {
+        pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+      } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+      return pos;
+    }
+
+    function step() {
+      dir = nextDir;
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+        endGame(); return;
+      }
+      if (snake.some(s => s.x === head.x && s.y === head.y)) {
+        endGame(); return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === apple.x && head.y === apple.y) {
+        score++;
+        document.getElementById('score-display').textContent = `SCORE: ${score}`;
+        notes.push({
+          pitch: PITCH_MAP[apple.y],
+          startTime: appleIndex * 0.5,
+          duration: 0.25,
+          velocity: Math.min(70 + appleIndex * 2, 120),
+        });
+        appleIndex++;
+        apple = randomApple();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function endGame() {
+      state = 'over';
+      clearInterval(gameInterval);
+      drawFrame();
+      document.getElementById('hint').style.display = 'none';
+      document.getElementById('game-over').style.display = 'block';
+    }
+
+    function saveAndClose() {
+      closeWithResult({ notes, score });
+    }
+
+    function drawFrame() {
+      // Background
+      ctx.fillStyle = C_BG;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid dots
+      ctx.fillStyle = C_LIGHT;
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          ctx.fillRect(x * CELL + CELL / 2 - 1, y * CELL + CELL / 2 - 1, 2, 2);
+        }
+      }
+
+      // Apple
+      if (apple) {
+        ctx.fillStyle = C_DARK;
+        ctx.beginPath();
+        ctx.arc(apple.x * CELL + CELL / 2, apple.y * CELL + CELL / 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(apple.x * CELL + CELL / 2 - 1, apple.y * CELL + 1, 2, 4);
+      }
+
+      // Snake (draw from tail to head so head is on top)
+      for (let i = snake.length - 1; i >= 0; i--) {
+        const s = snake[i];
+        if (i === 0) {
+          ctx.fillStyle = C_DARK;
+          ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+        } else {
+          ctx.fillStyle = C_MID;
+          ctx.fillRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4);
+        }
+      }
+
+      // Start screen overlay
+      if (state === 'start') {
+        ctx.fillStyle = 'rgba(15, 56, 15, 0.82)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = C_BG;
+        ctx.font = 'bold 32px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('SNAKE', canvas.width / 2, canvas.height / 2 - 12);
+        ctx.font = '11px monospace';
+        ctx.fillText('press any key to start', canvas.width / 2, canvas.height / 2 + 16);
+      }
+
+      // Game over overlay
+      if (state === 'over') {
+        ctx.fillStyle = 'rgba(15, 56, 15, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function startGame() {
+      state = 'playing';
+      document.getElementById('hint').style.display = 'none';
+      initGame();
+      gameInterval = setInterval(() => { step(); drawFrame(); }, 180);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (state === 'start') {
+        startGame();
+        return;
+      }
+      if (state !== 'playing') return;
+      switch (e.key) {
+        case 'ArrowUp':    if (dir.y !== 1)  nextDir = { x: 0, y: -1 }; break;
+        case 'ArrowDown':  if (dir.y !== -1) nextDir = { x: 0, y: 1 };  break;
+        case 'ArrowLeft':  if (dir.x !== 1)  nextDir = { x: -1, y: 0 }; break;
+        case 'ArrowRight': if (dir.x !== -1) nextDir = { x: 1, y: 0 };  break;
+        default: return;
+      }
+      e.preventDefault();
+    });
+
+    // Initial render
+    initGame();
+    drawFrame();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+models/
+*.DS_Store
+.DS_Store
+*.map
+dist/bin/basic-pitch  # Generated PyInstaller binary - too large to commit

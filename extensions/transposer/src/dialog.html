@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transposer</title>
+  <script>
+    function doSendMessage(message) {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+        window.webkit.messageHandlers.live.postMessage(message);
+      } else if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(message);
+      }
+    }
+
+    function closeWithResult(result) {
+      doSendMessage({ method: "close_and_send", params: [JSON.stringify(result)] });
+    }
+
+    function transpose() {
+      const semitones = parseInt(document.getElementById('semitones').value, 10);
+      closeWithResult({ action: 'transpose', semitones: semitones });
+    }
+
+    function cancel() {
+      closeWithResult({ action: 'cancel' });
+    }
+
+    function updateKnob(value) {
+      const intVal = parseInt(value, 10);
+      document.getElementById('semitones').value = intVal;
+      document.getElementById('semitone-display').textContent = intVal > 0 ? '+' + intVal : '' + intVal;
+      updateKnobVisual(intVal);
+    }
+
+    function updateKnobVisual(val) {
+      // val is -12 to +12, map to -150deg to +150deg (300deg range)
+      const deg = (val / 12) * 150;
+      const pointer = document.getElementById('knob-pointer');
+      pointer.style.transform = 'rotate(' + deg + 'deg)';
+      const knob = document.getElementById('knob-body');
+      if (val === 0) {
+        knob.style.borderColor = '#888';
+      } else if (val > 0) {
+        knob.style.borderColor = '#FFA500';
+      } else {
+        knob.style.borderColor = '#6AB0FF';
+      }
+    }
+
+    // Drag-to-rotate knob logic
+    let isDragging = false;
+    let dragStartY = 0;
+    let dragStartVal = 0;
+
+    function startDrag(e) {
+      isDragging = true;
+      dragStartY = e.clientY;
+      dragStartVal = parseInt(document.getElementById('semitones').value, 10);
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+      e.preventDefault();
+    }
+
+    function onDrag(e) {
+      if (!isDragging) return;
+      const delta = Math.round((dragStartY - e.clientY) / 8);
+      const newVal = Math.max(-12, Math.min(12, dragStartVal + delta));
+      updateKnob(newVal);
+    }
+
+    function stopDrag() {
+      isDragging = false;
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    }
+
+    window.onload = function() {
+      updateKnobVisual(0);
+    };
+  </script>
+  <style>
+    :root {
+      --ableton-bg: #383838;
+      --ableton-panel: #4E4E4E;
+      --ableton-button: #FFA500;
+      --ableton-button-hover: #FF8C00;
+      --ableton-text: #FFFFFF;
+      --ableton-border: #2C2C2C;
+      --ableton-input-bg: #2C2C2C;
+    }
+
+    * { -webkit-user-select: none; user-select: none; box-sizing: border-box; }
+    input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+
+    html, body {
+      background-color: var(--ableton-panel);
+      font-family: 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+      color: var(--ableton-text);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      padding: 20px 24px;
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    h3 {
+      font-size: 13px;
+      margin: 0 0 16px 0;
+      color: var(--ableton-text);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: normal;
+    }
+
+    /* Knob */
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .knob-body {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #6a6a6a, #2a2a2a);
+      border: 3px solid #888;
+      position: relative;
+      cursor: ns-resize;
+      transition: border-color 0.15s;
+    }
+
+    .knob-pointer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3px;
+      height: 26px;
+      background: #fff;
+      border-radius: 2px;
+      transform-origin: bottom center;
+      /* positioned: bottom of pointer at center */
+      margin-left: -1.5px;
+      margin-top: -26px;
+    }
+
+    .knob-tick-container {
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+
+    .semitone-display {
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--ableton-text);
+      min-width: 48px;
+      text-align: center;
+    }
+
+    /* Slider (hidden, synced with knob) */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      width: 100%;
+    }
+
+    .slider-label {
+      font-size: 11px;
+      color: #aaa;
+      min-width: 24px;
+      text-align: center;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 4px;
+      background: #2C2C2C;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ableton-button);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--ableton-button);
+      cursor: pointer;
+      border: none;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      width: 100%;
+    }
+
+    button {
+      padding: 6px 16px;
+      font-size: 12px;
+      background-color: var(--ableton-button);
+      color: #000;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    button:hover { background-color: var(--ableton-button-hover); }
+    button.secondary { background-color: #666; color: var(--ableton-text); }
+    button.secondary:hover { background-color: #777; }
+    button:disabled { opacity: 0.4; cursor: default; }
+  </style>
+</head>
+<body oncontextmenu="return false" ondragstart="return false">
+  <div class="modal-content">
+    <h3>Transpose</h3>
+
+    <!-- Knob -->
+    <div class="knob-container">
+      <div id="knob-body" class="knob-body" onmousedown="startDrag(event)">
+        <div id="knob-pointer" class="knob-pointer"></div>
+      </div>
+      <div id="semitone-display" class="semitone-display">0</div>
+    </div>
+
+    <!-- Slider -->
+    <div class="slider-row">
+      <span class="slider-label">−12</span>
+      <input
+        type="range"
+        id="semitones"
+        min="-12"
+        max="12"
+        value="0"
+        step="1"
+        oninput="updateKnob(this.value)"
+      />
+      <span class="slider-label">+12</span>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-container">
+      <button class="secondary" onclick="cancel()">Cancel</button>
+      <button id="transpose-btn" onclick="transpose()">Transpose</button>
+    </div>
+  </div>
+</body>
+</html>

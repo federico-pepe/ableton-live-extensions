@@ -1,0 +1,7 @@
+{
+  "name": "Chord Progression Helper",
+  "author": "Federico Pepe",
+  "entry": "dist/extension.js",
+  "version": "0.5.1",
+  "minimumApiVersion": "1.0.0"
+}

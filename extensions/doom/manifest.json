@@ -1,0 +1,7 @@
+{
+    "name": "Doom",
+    "author": "Federico",
+    "entry": "dist/extension.js",
+    "version": "0.0.2",
+    "minimumApiVersion": "1.0.0"
+}

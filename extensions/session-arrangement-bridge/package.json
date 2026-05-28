@@ -1,0 +1,17 @@
+{
+  "name": "bridge",
+  "version": "0.0.6",
+  "main": "dist/extension.js",
+  "scripts": {
+    "build": "node esbuild.js",
+    "build:prod": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../../"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Freesound Sampler</title>
+  <style>
+    @font-face {
+      font-family: "AbletonSansSmall";
+      font-weight: 400;
+      font-style: normal;
+      src: url("/Applications/Ableton Live 12.4 Alpha.app/Contents/App-Resources/Fonts/AbletonSansSmall-Regular.ttf") format("truetype");
+    }
+    @font-face {
+      font-family: "AbletonSansSmall";
+      font-weight: 700;
+      font-style: normal;
+      src: url("/Applications/Ableton Live 12.4 Alpha.app/Contents/App-Resources/Fonts/AbletonSansSmall-Bold.ttf") format("truetype");
+    }
+
+    :root {
+      /* Freesound identity — sea-green, evokes sound discovery */
+      --fs-accent:       hsl(152, 45%, 46%);
+      --fs-accent-dim:   hsl(152, 35%, 36%);
+      --fs-accent-glow:  hsl(152, 45%, 46%, 0.18);
+
+      /* Neutral base — Live-inspired dark grays */
+      --fs-bg:           hsl(0, 0%, 16%);
+      --fs-bg-raised:    hsl(0, 0%, 20%);
+      --fs-bg-sunken:    hsl(0, 0%, 11%);
+      --fs-border:       hsl(0, 0%, 8%);
+      --fs-border-mid:   hsl(0, 0%, 22%);
+      --fs-text:         hsl(0, 0%, 72%);
+      --fs-text-dim:     hsl(0, 0%, 40%);
+      --fs-error:        hsl(4, 65%, 58%);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { -webkit-user-select: none; user-select: none; }
+    input, [contenteditable] { -webkit-user-select: text; user-select: text; }
+
+    html, body {
+      background: var(--fs-bg);
+      color: var(--fs-text);
+      font-family: "AbletonSansSmall", "Lucida Grande", sans-serif;
+      font-size: 11.5px;
+      font-weight: 400;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-identity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-mark {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--fs-accent);
+      flex-shrink: 0;
+    }
+
+    .page-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--fs-text);
+    }
+
+    .page-subtitle {
+      font-size: 10.5px;
+      color: var(--fs-text-dim);
+      margin-top: 1px;
+    }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--fs-border-mid); flex-shrink: 0; }
+
+    /* ── Search focal point ── */
+    .search-focal {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .focal-label {
+      font-size: 10px;
+      color: var(--fs-text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    #query {
+      width: 100%;
+      background: var(--fs-bg-sunken);
+      border: 1px solid var(--fs-border);
+      border-bottom: 2px solid var(--fs-accent-dim);
+      color: var(--fs-text);
+      font-family: inherit;
+      font-size: 12.5px;
+      padding: 7px 10px;
+      appearance: none;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #query:focus {
+      border-color: var(--fs-accent);
+      border-bottom-color: var(--fs-accent);
+    }
+
+    #query::placeholder { color: var(--fs-text-dim); }
+
+    /* ── Filter grid ── */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field-wide { grid-column: 1 / -1; }
+    .field-half { grid-column: span 1; }
+
+    .label {
+      font-size: 10px;
+      color: var(--fs-text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    select,
+    input[type="password"] {
+      background: var(--fs-bg-sunken);
+      border: 1px solid var(--fs-border);
+      color: var(--fs-text);
+      font-family: inherit;
+      font-size: 11px;
+      padding: 4px 6px;
+      appearance: none;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.12s;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 5'%3E%3Cpath d='M0 0l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+      background-size: 8px;
+      padding-right: 20px;
+    }
+
+    select:focus,
+    input[type="password"]:focus {
+      border-color: var(--fs-accent-dim);
+      outline: none;
+    }
+
+    input[type="password"]::placeholder { color: var(--fs-text-dim); font-size: 10px; }
+
+    /* API key row */
+    .apikey-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .hint {
+      font-size: 10px;
+      color: var(--fs-text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 0 14px;
+      height: 22px;
+      font-size: 11px;
+      font-family: inherit;
+      font-weight: 400;
+      border: 1px solid var(--fs-border);
+      border-radius: 11px;
+      cursor: pointer;
+      background: var(--fs-bg-raised);
+      color: var(--fs-text);
+      white-space: nowrap;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--fs-bg-sunken);
+      border-color: var(--fs-text-dim);
+    }
+
+    .btn:disabled { opacity: 0.35; cursor: default; }
+
+    .btn.primary {
+      background: var(--fs-accent-dim);
+      border-color: var(--fs-accent-dim);
+      color: hsl(0, 0%, 10%);
+      font-weight: 700;
+    }
+
+    .btn.primary:hover:not(:disabled) {
+      background: var(--fs-accent);
+      border-color: var(--fs-accent);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    /* ── Status ── */
+    .status {
+      font-size: 10.5px;
+      color: var(--fs-text-dim);
+      min-height: 15px;
+      flex-shrink: 0;
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    .status.error { color: var(--fs-error); }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      height: 2px;
+      background: var(--fs-bg-sunken);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--fs-accent);
+      transition: width 0.25s ease;
+    }
+
+    /* ── Results list ── */
+    #results-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-height: 0;
+    }
+
+    #results-list::-webkit-scrollbar { width: 4px; }
+    #results-list::-webkit-scrollbar-track { background: transparent; }
+    #results-list::-webkit-scrollbar-thumb { background: var(--fs-border-mid); border-radius: 2px; }
+    #results-list::-webkit-scrollbar-thumb:hover { background: var(--fs-accent-dim); }
+
+    /* ── Result card ── */
+    .result-card {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px 8px 12px;
+      background: var(--fs-bg-raised);
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      transition: border-color 0.1s, background 0.1s;
+    }
+
+    .result-card:hover {
+      background: hsl(0, 0%, 23%);
+      border-left-color: var(--fs-accent);
+    }
+
+    .card-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .card-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--fs-text);
+    }
+
+    .card-meta {
+      font-size: 10px;
+      color: var(--fs-text-dim);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .card-meta-item {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .card-meta-item::before { content: "·"; color: var(--fs-border-mid); }
+    .card-meta-item:first-child::before { content: ""; }
+
+    /* ── Preview button ── */
+    .preview-btn {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: transparent;
+      border: 1px solid var(--fs-border-mid);
+      border-radius: 50%;
+      color: var(--fs-text-dim);
+      font-size: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-family: inherit;
+      transition: border-color 0.1s, color 0.1s;
+    }
+
+    .preview-btn:hover {
+      border-color: var(--fs-accent-dim);
+      color: var(--fs-accent);
+    }
+
+    .preview-btn.playing {
+      border-color: var(--fs-accent);
+      color: var(--fs-accent);
+      background: var(--fs-accent-glow);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      color: var(--fs-text-dim);
+      text-align: center;
+      padding: 32px 0;
+      line-height: 1.7;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body oncontextmenu="return false">
+
+  <!-- PHASE A — Search -->
+  <div class="page" id="page-search">
+    <div class="header">
+      <div class="header-identity">
+        <div class="header-mark"></div>
+        <div class="page-title">Freesound Sampler</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="search-focal">
+      <label class="focal-label" for="query">Search</label>
+      <input type="text" id="query" placeholder="drums, ambient pad, vinyl crackle…" />
+    </div>
+
+    <div class="filter-grid">
+      <div class="field field-half">
+        <label class="label" for="maxdur">Max duration</label>
+        <select id="maxdur">
+          <option value="">Any</option>
+          <option value="1">≤ 1s</option>
+          <option value="5">≤ 5s</option>
+          <option value="15">≤ 15s</option>
+          <option value="30">≤ 30s</option>
+          <option value="60">≤ 60s</option>
+        </select>
+      </div>
+      <div class="field field-half">
+        <label class="label" for="channels">Channels</label>
+        <select id="channels">
+          <option value="">Any</option>
+          <option value="1">Mono</option>
+          <option value="2">Stereo</option>
+        </select>
+      </div>
+      <div class="field field-half">
+        <label class="label" for="minrating">Min rating</label>
+        <select id="minrating">
+          <option value="">Any</option>
+          <option value="4">★ 4.0+</option>
+          <option value="4.5">★ 4.5+</option>
+          <option value="5">★ 5.0</option>
+        </select>
+      </div>
+      <div class="field field-half">
+        <label class="label" for="license">License</label>
+        <select id="license">
+          <option value="">Any</option>
+          <option value="CC0">CC0 — public domain</option>
+          <option value="CC-BY">CC-BY — attribution</option>
+          <option value="CC-BY-NC">CC-BY-NC — non-commercial</option>
+          <option value="CC-BY-SA">CC-BY-SA — share-alike</option>
+        </select>
+      </div>
+      <div class="field field-half">
+        <label class="label" for="sortby">Sort by</label>
+        <select id="sortby">
+          <option value="">Relevance</option>
+          <option value="downloads">Downloads</option>
+          <option value="rating">Rating</option>
+          <option value="created">Date added</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="apikey-row">
+      <label class="label" for="apikey">API key <span style="color:var(--fs-text-dim);font-weight:400">(optional — freesound.org/apiv2)</span></label>
+      <input type="password" id="apikey" placeholder="Increases rate limits" />
+    </div>
+
+    <div class="status" id="search-status"></div>
+
+    <div class="footer">
+      <button class="btn primary" id="search-btn" onclick="startSearch()">Search</button>
+      <button class="btn" onclick="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- PHASE B — Results -->
+  <div class="page hidden" id="page-results">
+    <div class="header">
+      <div class="header-identity">
+        <div class="header-mark"></div>
+        <div>
+          <div class="page-title">Freesound Sampler</div>
+          <div class="page-subtitle" id="results-subtitle">Click a sound to download</div>
+        </div>
+      </div>
+      <button class="btn" onclick="backToSearch()">← Back</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="results-list">
+      <div class="empty-state hidden" id="no-results-msg">
+        No sounds found.<br>Try a different query or broader filters.
+      </div>
+    </div>
+
+    <div class="progress-wrap hidden" id="results-progress-wrap">
+      <div class="progress-bar" id="results-progress-bar"></div>
+    </div>
+
+    <div class="status" id="results-status"></div>
+
+    <div class="footer">
+      <button class="btn primary" id="more-btn" onclick="loadMore()" style="display:none;">Load more</button>
+      <button class="btn" onclick="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    // Messaging bridge
+    function sendResult(value) {
+      var msg = { method: "close_and_send", params: [JSON.stringify(value)] };
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+        window.webkit.messageHandlers.live.postMessage(msg);
+      } else if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    function cancel() { sendResult(null); }
+
+    // Page switching
+    function showPage(id) {
+      ["page-search", "page-results"].forEach(function(p) {
+        document.getElementById(p).classList.toggle("hidden", p !== id);
+      });
+    }
+
+    function backToSearch() {
+      stopPreview();
+      setStatus("search-status", "", false);
+      document.getElementById("more-btn").style.display = "none";
+      showPage("page-search");
+    }
+
+    // Status helpers
+    function setStatus(elId, msg, isError) {
+      var el = document.getElementById(elId);
+      el.textContent = msg;
+      el.className = "status" + (isError ? " error" : "");
+    }
+
+    function setProgress(pct) {
+      var wrap = document.getElementById("results-progress-wrap");
+      var bar  = document.getElementById("results-progress-bar");
+      if (pct <= 0 || pct >= 100) {
+        wrap.classList.add("hidden");
+        bar.style.width = "0%";
+      } else {
+        wrap.classList.remove("hidden");
+        bar.style.width = pct + "%";
+      }
+    }
+
+    // Format duration as mm:ss
+    function formatDuration(seconds) {
+      var min = Math.floor(seconds / 60);
+      var sec = Math.floor(seconds % 60);
+      return min + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+
+    // Pagination state
+    var paginationState = {
+      query: "",
+      maxDur: "",
+      channels: "",
+      minRating: "",
+      license: "",
+      sortBy: "",
+      apiKey: "",
+      currentPage: 1,
+      totalCount: 0,
+      hasMore: false
+    };
+
+    // Freesound API search
+    async function searchFreesound(query, maxDur, channels, minRating, license, sortBy, apiKey, page) {
+      var params = new URLSearchParams({
+        query: query,
+        token: apiKey,
+        fields: "id,name,duration,previews,username,license,tags,category,num_downloads,avg_rating,samplerate,channels,description",
+        page_size: "15",
+        page: String(page),
+      });
+
+      // Build filter string
+      var filters = [];
+      if (maxDur) {
+        filters.push("duration:[0 TO " + maxDur + "]");
+      }
+      if (channels) {
+        filters.push("channels:" + channels);
+      }
+      if (minRating) {
+        filters.push("avg_rating:[" + minRating + " TO 5]");
+      }
+      if (license) {
+        filters.push("license:" + license);
+      }
+      if (filters.length > 0) {
+        params.set("filter", filters.join(" "));
+      }
+
+      if (sortBy) {
+        params.set("sort", sortBy);
+      }
+
+      var url = "https://freesound.org/apiv2/search/text/?" + params.toString();
+      console.log("[Freesound] Searching:", url);
+
+      var resp = await fetch(url);
+      console.log("[Freesound] Response status:", resp.status);
+
+      if (resp.status === 429) {
+        console.log("[Freesound] Rate limited, waiting...");
+        await new Promise(function(r) { setTimeout(r, 2000); });
+        resp = await fetch(url);
+      }
+
+      if (!resp.ok) {
+        var errText = await resp.text();
+        console.error("[Freesound] Error response:", resp.status, errText);
+        if (resp.status === 401) {
+          throw new Error("Invalid or empty API key. Please check your key at freesound.org/apiv2");
+        }
+        throw new Error("Freesound API error: HTTP " + resp.status + ". Check your internet connection and API key.");
+      }
+
+      var data = await resp.json();
+      console.log("[Freesound] Got " + (data.results ? data.results.length : 0) + " results");
+      return data;
+    }
+
+    // Audio preview state
+    var currentAudio = null;
+    var currentPlayBtn = null;
+
+    function stopPreview() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = "";
+        currentAudio = null;
+      }
+      if (currentPlayBtn) {
+        currentPlayBtn.textContent = "▶";
+        currentPlayBtn.classList.remove("playing");
+        currentPlayBtn = null;
+      }
+    }
+
+    function togglePreview(event, previewUrl, btn) {
+      event.stopPropagation();
+
+      if (currentAudio && currentPlayBtn === btn) {
+        stopPreview();
+        return;
+      }
+
+      stopPreview();
+
+      var audio = new Audio(previewUrl);
+      currentAudio = audio;
+      currentPlayBtn = btn;
+      btn.textContent = "■";
+      btn.classList.add("playing");
+
+      audio.onended = function() {
+        if (currentAudio === audio) stopPreview();
+      };
+      audio.onerror = function() {
+        if (currentAudio === audio) stopPreview();
+      };
+      audio.play().catch(function() {
+        if (currentAudio === audio) stopPreview();
+      });
+    }
+
+    // Render result card
+    function renderCard(sound) {
+      var card = document.createElement("div");
+      card.className = "result-card";
+
+      // Card body: title + meta
+      var body = document.createElement("div");
+      body.className = "card-body";
+
+      var title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = sound.name;
+      body.appendChild(title);
+
+      var meta = document.createElement("div");
+      meta.className = "card-meta";
+
+      var durationItem = document.createElement("div");
+      durationItem.className = "card-meta-item";
+      durationItem.textContent = formatDuration(sound.duration);
+      meta.appendChild(durationItem);
+
+      var userItem = document.createElement("div");
+      userItem.className = "card-meta-item";
+      userItem.textContent = "by " + sound.username;
+      meta.appendChild(userItem);
+
+      if (sound.category) {
+        var categorySpan = document.createElement("span");
+        categorySpan.style.cssText = "font-size:9px; background:hsl(152,45%,46%); color:hsl(0,0%,10%); padding:1px 5px; border-radius:2px;";
+        categorySpan.textContent = sound.category;
+        meta.appendChild(categorySpan);
+      }
+
+      if (sound.license) {
+        var licenseSpan = document.createElement("span");
+        licenseSpan.style.cssText = "font-size:9px; background:hsl(152,45%,46%); color:hsl(0,0%,10%); padding:1px 5px; border-radius:2px;";
+        licenseSpan.textContent = sound.license;
+        meta.appendChild(licenseSpan);
+      }
+
+      if (sound.avg_rating && sound.num_downloads !== undefined) {
+        var statsItem = document.createElement("div");
+        statsItem.className = "card-meta-item";
+        var rating = Math.round(sound.avg_rating * 10) / 10;
+        statsItem.textContent = "★" + rating + " · " + sound.num_downloads + " downloads";
+        meta.appendChild(statsItem);
+      }
+
+      body.appendChild(meta);
+      card.appendChild(body);
+
+      // Preview button
+      var previewUrl = sound.previews["preview-hq-mp3"] || sound.previews["preview-lq-mp3"];
+      if (previewUrl) {
+        var playBtn = document.createElement("button");
+        playBtn.className = "preview-btn";
+        playBtn.textContent = "▶";
+        playBtn.title = "Preview";
+        playBtn.onclick = function(e) { togglePreview(e, previewUrl, playBtn); };
+        card.appendChild(playBtn);
+      }
+
+      card.onclick = function() {
+        stopPreview();
+        sendResult({
+          previewUrl: sound.previews["preview-hq-mp3"],
+          name: sound.name,
+          username: sound.username,
+          id: sound.id,
+          duration: sound.duration,
+          license: sound.license || "CC0",
+          _apiKey: document.getElementById("apikey").value,
+        });
+      };
+
+      return card;
+    }
+
+    // Load more results
+    async function loadMore() {
+      var btn = document.getElementById("more-btn");
+      btn.disabled = true;
+      setStatus("results-status", "Loading more...", false);
+
+      try {
+        var nextPage = paginationState.currentPage + 1;
+        var data = await searchFreesound(
+          paginationState.query,
+          paginationState.maxDur,
+          paginationState.channels,
+          paginationState.minRating,
+          paginationState.license,
+          paginationState.sortBy,
+          paginationState.apiKey,
+          nextPage
+        );
+
+        if (!data.results || data.results.length === 0) {
+          setStatus("results-status", "No more results.", false);
+          btn.style.display = "none";
+          return;
+        }
+
+        var list = document.getElementById("results-list");
+        data.results.forEach(function(sound) {
+          list.appendChild(renderCard(sound));
+        });
+
+        paginationState.currentPage = nextPage;
+        paginationState.hasMore = data.next ? true : false;
+
+        if (!paginationState.hasMore) {
+          btn.style.display = "none";
+        }
+
+        setStatus("results-status", "", false);
+
+      } catch (err) {
+        setStatus("results-status", "Error loading more: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Main search
+    async function startSearch() {
+      var query = document.getElementById("query").value.trim();
+      if (!query) {
+        setStatus("search-status", "Please enter a search query.", true);
+        return;
+      }
+
+      var maxDur = document.getElementById("maxdur").value;
+      var channels = document.getElementById("channels").value;
+      var minRating = document.getElementById("minrating").value;
+      var license = document.getElementById("license").value;
+      var sortBy = document.getElementById("sortby").value;
+      var apiKey = document.getElementById("apikey").value;
+
+      var btn = document.getElementById("search-btn");
+      btn.disabled = true;
+      setStatus("search-status", "Searching Freesound...", false);
+
+      try {
+        var data = await searchFreesound(query, maxDur, channels, minRating, license, sortBy, apiKey, 1);
+
+        if (!data.results || data.results.length === 0) {
+          setStatus("search-status", "No sounds found. Try a different query.", true);
+          btn.disabled = false;
+          return;
+        }
+
+        showPage("page-results");
+        var list = document.getElementById("results-list");
+        list.innerHTML = "";
+        data.results.forEach(function(sound) {
+          list.appendChild(renderCard(sound));
+        });
+
+        // Store pagination state
+        paginationState.query = query;
+        paginationState.maxDur = maxDur;
+        paginationState.channels = channels;
+        paginationState.minRating = minRating;
+        paginationState.license = license;
+        paginationState.sortBy = sortBy;
+        paginationState.apiKey = apiKey;
+        paginationState.currentPage = 1;
+        paginationState.totalCount = data.count;
+        paginationState.hasMore = data.next ? true : false;
+
+        document.getElementById("results-subtitle").textContent =
+          "Found " + data.count + " sound" + (data.count !== 1 ? "s" : "");
+
+        // Show/hide More button
+        var moreBtn = document.getElementById("more-btn");
+        moreBtn.style.display = paginationState.hasMore ? "block" : "none";
+
+        setStatus("results-status", "", false);
+
+      } catch (err) {
+        setStatus("search-status", "Error: " + err.message, true);
+        console.error("[Dialog] Search error:", err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") cancel();
+      if (e.key === "Enter" && !document.getElementById("page-search").classList.contains("hidden")) {
+        startSearch();
+      }
+    });
+
+    // Init
+    var INITIAL_DATA = (window.INITIAL_DATA) || { savedApiKey: "" };
+    document.getElementById("apikey").value = INITIAL_DATA.savedApiKey || "";
+    document.getElementById("query").focus();
+  </script>
+</body>
+</html>

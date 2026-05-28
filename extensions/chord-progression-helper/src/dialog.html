@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chord Progression Helper</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #1c1c1c;
+      --surface:    #272727;
+      --surface2:   #2e2e2e;
+      --border:     #3a3a3a;
+      --text:       #d4d4d4;
+      --muted:      #6b6b6b;
+      --orange:     #FFA500;
+      --orange-dim: #cc8400;
+
+      --sec-bg:     #2a2418;
+      --sec-border: #8a6000;
+      --sec-text:   #e8b840;
+      --sec-label:  #c9961e;
+
+      --dia-bg:     #1a2030;
+      --dia-border: #3a6abf;
+      --dia-text:   #7aacf5;
+      --dia-label:  #5a8fdd;
+
+      --bor-bg:     #221828;
+      --bor-border: #6040a0;
+      --bor-text:   #b080f0;
+      --bor-label:  #9060d0;
+
+      --chip-bg:    #1e2535;
+      --chip-text:  #7aacf5;
+      --arrow:      #555;
+    }
+    html, body {
+      width: 920px; height: 580px;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+    }
+    /* ── Header ── */
+    header {
+      padding: 10px 16px 8px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 3px;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 3px;
+    }
+    .tab-btn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .03em;
+      transition: all .13s;
+    }
+    .tab-btn.active {
+      background: var(--dia-bg);
+      color: var(--dia-text);
+      border: 1px solid var(--dia-border);
+    }
+    .controls { display: flex; align-items: center; gap: 8px; }
+    .control-group { display: flex; align-items: center; gap: 6px; }
+    .control-group label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    select {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus { border-color: var(--dia-border); }
+    /* ── Grid ── */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 16px 6px;
+    }
+    .mode { display: none; }
+    .mode.active { display: block; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px 6px;
+    }
+    .full-row  { grid-column: 1 / -1; }
+    .row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 2px 3px;
+    }
+    .row-header.first { padding-top: 0; }
+    .row-tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    .sec-tag { background: var(--sec-bg);  color: var(--sec-label); border: 1px solid var(--sec-border); }
+    .dia-tag { background: var(--dia-bg);  color: var(--dia-label); border: 1px solid var(--dia-border); }
+    .bor-tag { background: var(--bor-bg);  color: var(--bor-label); border: 1px solid var(--bor-border); }
+    .start-here {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--dia-label);
+      letter-spacing: .04em;
+    }
+    .col-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 12px;
+      color: var(--arrow);
+      font-size: 11px;
+      line-height: 1;
+    }
+    .row-divider {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2px 4px;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-top: 1px dashed var(--border);
+      border-bottom: 1px dashed var(--border);
+      margin: 1px 0;
+    }
+    .cell {
+      border-radius: 6px;
+      padding: 7px 5px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 3px;
+      border: 1px solid transparent;
+      transition: filter .12s, transform .08s;
+      min-height: 56px;
+    }
+    .cell.neapolitan { border-style: dashed; }
+    .cell:hover { filter: brightness(1.18); transform: translateY(-1px); }
+    .cell.cell-disabled {
+      opacity: .12;
+      pointer-events: none;
+      filter: grayscale(1);
+      transform: none !important;
+      transition: opacity .22s, filter .22s;
+    }
+    .cell.resolution-target {
+      animation: resolve-pulse 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes resolve-pulse {
+      from { box-shadow: 0 0 0 2px var(--dia-border); }
+      to   { box-shadow: 0 0 0 5px var(--dia-border), 0 0 14px rgba(58,106,191,.25); }
+    }
+    .cell:active { transform: scale(.95); }
+    .cell.secondary { background: var(--sec-bg); border-color: var(--sec-border); }
+    .cell.diatonic  { background: var(--dia-bg); border-color: var(--dia-border); min-height: 66px; }
+    .cell.borrowed  { background: var(--bor-bg); border-color: var(--bor-border); }
+    .cell.empty {
+      background: transparent;
+      border: 1px dashed #333;
+      cursor: default;
+      pointer-events: none;
+      opacity: .15;
+    }
+    .cell-name  { font-size: 13px; font-weight: 700; letter-spacing: -.01em; }
+    .cell.secondary .cell-name { color: var(--sec-text); }
+    .cell.diatonic  .cell-name { color: var(--dia-text); }
+    .cell.borrowed  .cell-name { color: var(--bor-text); }
+    .cell-label { font-size: 9px; font-weight: 500; opacity: .8; }
+    .cell.secondary .cell-label { color: var(--sec-label); }
+    .cell.diatonic  .cell-label { color: var(--dia-label); }
+    .cell.borrowed  .cell-label { color: var(--bor-label); }
+    .cell-notes { font-size: 8px; color: var(--muted); }
+    [data-tooltip] { position: relative; }
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 5px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111;
+      border: 1px solid #444;
+      color: #ccc;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 99;
+      pointer-events: none;
+      max-width: 280px;
+      white-space: normal;
+      text-align: center;
+    }
+    /* ── Progression bar ── */
+    #progression-section {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    #progression-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+    #progression-header h3 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+    }
+    .prog-actions { display: flex; align-items: center; gap: 8px; }
+    #clear-btn {
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all .12s;
+    }
+    #clear-btn:hover { border-color: #c0392b; color: #e74c3c; }
+    #write-btn {
+      padding: 4px 16px;
+      border: none;
+      border-radius: 5px;
+      background: var(--orange);
+      color: #000;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      transition: background .12s, opacity .12s;
+    }
+    #write-btn:hover:not(:disabled) { background: #ffb833; }
+    #write-btn:disabled { opacity: .35; cursor: default; }
+    #progression-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 30px;
+      align-items: center;
+    }
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--chip-bg);
+      border: 1px solid var(--dia-border);
+      border-radius: 5px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all .12s;
+    }
+    .chip:hover { border-color: #c0392b; background: #2a1818; }
+    .chip:hover .chip-x { opacity: 1; }
+    .chip-name  { font-size: 12px; font-weight: 600; color: var(--chip-text); }
+    .chip-roman { font-size: 9px; color: var(--muted); }
+    .chip-x     { font-size: 10px; color: #e74c3c; opacity: 0; transition: opacity .12s; }
+    #empty-msg  { color: var(--muted); font-size: 12px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="tabs">
+    <button class="tab-btn active" data-mode="p2">Progression II</button>
+    <button class="tab-btn"        data-mode="dh">Dark Harmony</button>
+  </div>
+  <div class="controls">
+    <div class="control-group">
+      <label>Sound</label>
+      <select id="sound-select">
+        <option value="none">Off</option>
+        <option value="piano" selected>Grand Piano</option>
+        <option value="ep">Electric Piano</option>
+        <option value="synth">Synth</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Key</label>
+      <select id="key-select"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="mode-p2" class="mode active">
+    <div class="grid" id="grid-p2"></div>
+  </div>
+  <div id="mode-dh" class="mode">
+    <div class="grid" id="grid-dh"></div>
+  </div>
+</main>
+
+<div id="progression-section">
+  <div id="progression-header">
+    <h3>Progression</h3>
+    <div class="prog-actions">
+      <button id="clear-btn">Clear</button>
+      <button id="write-btn" disabled>Write to MIDI Clip</button>
+    </div>
+  </div>
+  <div id="progression-chips">
+    <span id="empty-msg">Click chords above to build a progression…</span>
+  </div>
+</div>
+
+<script>
+// ── Injected data ─────────────────────────────────────────────────────
+const ALL_DATA = /*__ALL_DATA__*/null;
+// ALL_DATA: { p2: Record<string, ColumnData[]>, dh: Record<string, ColumnData[]>,
+//             majorKeys: string[], minorKeys: string[] }
+// ColumnData: { secondary: ChordInfo|null, diatonic: ChordInfo, borrowed: ChordInfo|null }
+// ChordInfo:  { name, roman, notes, midiNotes, sameAs?, neapolitan? }
+
+// ── State ─────────────────────────────────────────────────────────────
+const state = {
+  mode: 'p2',
+  keys: { p2: ALL_DATA ? ALL_DATA.majorKeys[0] : 'C',
+          dh: ALL_DATA ? ALL_DATA.minorKeys[0] : 'A' },
+  progression: [],
+  pendingResolution: null,
+};
+
+// ── Close / result ────────────────────────────────────────────────────
+function closeWithResult(data) {
+  const msg = { method: "close_and_send", params: [JSON.stringify(data)] };
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+    window.webkit.messageHandlers.live.postMessage(msg);
+  } else if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.postMessage(msg);
+  }
+}
+
+// ── Resolution constraints ────────────────────────────────────────────
+function clearResolutionConstraint() {
+  ['grid-p2', 'grid-dh'].forEach(id => {
+    const g = document.getElementById(id);
+    if (g) g.querySelectorAll('.cell').forEach(c =>
+      c.classList.remove('cell-disabled', 'resolution-target')
+    );
+  });
+  state.pendingResolution = null;
+}
+
+function applyResolutionConstraint(gridEl, colIdx) {
+  clearResolutionConstraint();
+  gridEl.querySelectorAll('.cell:not(.empty)').forEach(cell => {
+    const isTarget = +cell.dataset.col === colIdx && cell.dataset.row === 'diatonic';
+    cell.classList.toggle('cell-disabled', !isTarget);
+    cell.classList.toggle('resolution-target', isTarget);
+  });
+  state.pendingResolution = { gridId: gridEl.id, colIdx };
+}
+
+function applyBorrowedConstraint(gridEl, allowedDiatonicCols) {
+  clearResolutionConstraint();
+  gridEl.querySelectorAll('.cell:not(.empty)').forEach(cell => {
+    const row = cell.dataset.row;
+    const col = +cell.dataset.col;
+    const disabled =
+      row === 'secondary' ||
+      (row === 'diatonic' && !allowedDiatonicCols.includes(col));
+    cell.classList.toggle('cell-disabled', disabled);
+  });
+  state.pendingResolution = { gridId: gridEl.id, allowedDiatonicCols };
+}
+
+function flashCell(el) {
+  el.style.outline = '2px solid var(--dia-border)';
+  el.style.outlineOffset = '2px';
+  setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 300);
+}
+
+// ── Initial dim (highlight only Main Chords row on render) ────────────
+function applyInitialDim(gridEl) {
+  gridEl.querySelectorAll('.cell:not(.empty)').forEach(cell => {
+    if (cell.dataset.row !== 'diatonic') {
+      cell.classList.add('cell-disabled');
+    }
+  });
+}
+
+// ── Audio preview ─────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function playNote_piano(ctx, freq, vel) {
+  const t = ctx.currentTime;
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+  master.gain.setValueAtTime(vel, t);
+  master.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+
+  const amps = [1, 0.5, 0.25, 0.13, 0.07, 0.035, 0.018];
+  amps.forEach((amp, i) => {
+    const n = i + 1;
+    // slight inharmonicity
+    const f = freq * n * Math.sqrt(1 + 0.00015 * n * n);
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    const decay = 2.5 / (n * 0.45 + 0.55);
+    g.gain.setValueAtTime(amp * 0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+    osc.connect(g);
+    g.connect(master);
+    osc.start(t);
+    osc.stop(t + decay + 0.05);
+  });
+}
+
+function playNote_ep(ctx, freq, vel) {
+  const t = ctx.currentTime;
+  // FM: carrier sine, modulator at 2× freq, decaying mod depth
+  const mod     = ctx.createOscillator();
+  const modGain = ctx.createGain();
+  const car     = ctx.createOscillator();
+  const gain    = ctx.createGain();
+
+  mod.type = 'sine';
+  mod.frequency.value = freq * 2;
+  modGain.gain.setValueAtTime(freq * 2.8, t);
+  modGain.gain.exponentialRampToValueAtTime(0.5, t + 1.0);
+  mod.connect(modGain);
+  modGain.connect(car.frequency);
+
+  car.type = 'sine';
+  car.frequency.value = freq;
+  car.connect(gain);
+  gain.connect(ctx.destination);
+
+  gain.gain.setValueAtTime(vel * 0.5, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+
+  mod.start(t); car.start(t);
+  mod.stop(t + 2.5); car.stop(t + 2.5);
+}
+
+function playNote_synth(ctx, freq, vel) {
+  const t = ctx.currentTime;
+  const osc1   = ctx.createOscillator();
+  const osc2   = ctx.createOscillator();
+  const filter = ctx.createBiquadFilter();
+  const gain   = ctx.createGain();
+
+  osc1.type = 'sawtooth'; osc1.frequency.value = freq;
+  osc2.type = 'sawtooth'; osc2.frequency.value = freq * 1.006;
+
+  filter.type = 'lowpass';
+  filter.Q.value = 3.5;
+  filter.frequency.setValueAtTime(freq * 1.2, t);
+  filter.frequency.exponentialRampToValueAtTime(freq * 7, t + 0.06);
+  filter.frequency.exponentialRampToValueAtTime(freq * 2, t + 1.5);
+
+  osc1.connect(filter); osc2.connect(filter);
+  filter.connect(gain); gain.connect(ctx.destination);
+
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vel * 0.28, t + 0.018);
+  gain.gain.setValueAtTime(vel * 0.28, t + 0.25);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+
+  osc1.start(t); osc2.start(t);
+  osc1.stop(t + 2); osc2.stop(t + 2);
+}
+
+function previewChord(midiNotes) {
+  const instrument = document.getElementById('sound-select').value;
+  if (instrument === 'none') return;
+  const ctx = getAudioCtx();
+  const vel = 0.7 / Math.sqrt(midiNotes.length);
+  midiNotes.forEach(midi => {
+    const freq = midiToFreq(midi);
+    if (instrument === 'piano') playNote_piano(ctx, freq, vel);
+    else if (instrument === 'ep')    playNote_ep(ctx, freq, vel);
+    else if (instrument === 'synth') playNote_synth(ctx, freq, vel);
+  });
+}
+
+// ── Cell builder (uses pre-baked ChordInfo) ───────────────────────────
+function makeCellEl(chordInfo, rowClass) {
+  const el = document.createElement('div');
+  if (!chordInfo) {
+    el.className = 'cell empty';
+    return el;
+  }
+  const { name, roman, notes, midiNotes, sameAs, neapolitan } = chordInfo;
+  el.className = `cell ${rowClass}${neapolitan ? ' neapolitan' : ''}`;
+  let tip = notes ? `${name}: ${notes}` : name;
+  if (sameAs) tip += ` | Same chord: ${sameAs}`;
+  el.dataset.tooltip = tip;
+  el.innerHTML = `
+    <div class="cell-name">${name}</div>
+    <div class="cell-label">${roman}</div>
+    ${notes ? `<div class="cell-notes">${notes}</div>` : ''}
+  `;
+  el.addEventListener('click', () => {
+    addToProgression(name, roman, midiNotes);
+    flashCell(el);
+  });
+  return el;
+}
+
+// ── Grid renderer ─────────────────────────────────────────────────────
+function renderGrid(gridEl, columns, opts) {
+  const {
+    topLabel            = 'SECONDARY DOMINANTS',
+    midLabel            = 'MAIN CHORDS',
+    botLabel            = 'MODAL INTERCHANGE',
+    upHint              = '↑ Up: to any chord',
+    downHint            = '↓ Down: follow the arrows',
+    midUpHint           = '↓ Down: to any chord',
+    midDownHint         = '↑ Up: follow the arrows',
+    borrowedAllowedCols = [],
+  } = opts || {};
+
+  gridEl.innerHTML = '';
+  const add = el => gridEl.appendChild(el);
+  const div = (cls, html = '') => {
+    const el = document.createElement('div');
+    el.className = cls;
+    if (html) el.innerHTML = html;
+    return el;
+  };
+
+  // Top row
+  add(div('row-header full-row first',
+    `<div></div><span class="row-tag sec-tag">${topLabel}</span>`));
+  columns.forEach((col, colIdx) => {
+    const cell = makeCellEl(col.secondary, 'secondary');
+    cell.dataset.col = colIdx;
+    cell.dataset.row = 'secondary';
+    if (!cell.classList.contains('empty'))
+      cell.addEventListener('click', () => applyResolutionConstraint(gridEl, colIdx));
+    add(cell);
+  });
+  columns.forEach(col => {
+    const a = div('col-arrow');
+    if (col.secondary) a.textContent = '↓';
+    add(a);
+  });
+  add(div('row-divider full-row',
+    `<span>${upHint}</span><span>${downHint}</span>`));
+
+  // Middle row
+  add(div('row-header full-row',
+    `<span class="start-here">← START HERE</span><span class="row-tag dia-tag">${midLabel}</span>`));
+  columns.forEach((col, colIdx) => {
+    const cell = makeCellEl(col.diatonic, 'diatonic');
+    cell.dataset.col = colIdx;
+    cell.dataset.row = 'diatonic';
+    if (!cell.classList.contains('empty'))
+      cell.addEventListener('click', () => clearResolutionConstraint());
+    add(cell);
+  });
+  columns.forEach(col => {
+    const a = div('col-arrow');
+    if (col.borrowed) a.textContent = '↓';
+    add(a);
+  });
+  add(div('row-divider full-row',
+    `<span>${midUpHint}</span><span>${midDownHint}</span>`));
+
+  // Bottom row
+  add(div('row-header full-row',
+    `<div></div><span class="row-tag bor-tag">${botLabel}</span>`));
+  columns.forEach((col, colIdx) => {
+    const cell = makeCellEl(col.borrowed, 'borrowed');
+    cell.dataset.col = colIdx;
+    cell.dataset.row = 'borrowed';
+    if (!cell.classList.contains('empty'))
+      cell.addEventListener('click', () => applyBorrowedConstraint(gridEl, borrowedAllowedCols));
+    add(cell);
+  });
+
+  // Start with only Main Chords row enabled
+  applyInitialDim(gridEl);
+}
+
+const P2_OPTS = {
+  topLabel:            'SECONDARY DOMINANTS',
+  midLabel:            'MAIN CHORDS',
+  botLabel:            'MODAL INTERCHANGE',
+  upHint:              '↑ Up: to any chord',
+  downHint:            '↓ Down: follow the arrows',
+  midUpHint:           '↓ Down: from I, IV and V to any chord',
+  midDownHint:         '↑ Up: follow the arrows',
+  borrowedAllowedCols: [0, 2, 4],
+};
+const DH_OPTS = {
+  topLabel:            'SECONDARY DIMINISHED',
+  midLabel:            'MAIN CHORDS',
+  botLabel:            'SECONDARY DIMINISHED',
+  upHint:              '↑ Up: to any chord',
+  downHint:            '↓ Down: follow the arrow',
+  midUpHint:           '↓ Down: to any chord',
+  midDownHint:         '↑ Up: follow the arrows',
+  borrowedAllowedCols: [2, 3],
+};
+
+function refreshGrid() {
+  const key = state.keys[state.mode];
+  if (state.mode === 'p2') {
+    renderGrid(
+      document.getElementById('grid-p2'),
+      ALL_DATA.p2[key] || [],
+      P2_OPTS
+    );
+  } else {
+    renderGrid(
+      document.getElementById('grid-dh'),
+      ALL_DATA.dh[key] || [],
+      DH_OPTS
+    );
+  }
+}
+
+// ── Key selector ──────────────────────────────────────────────────────
+function populateKeySelect() {
+  const sel  = document.getElementById('key-select');
+  const keys = state.mode === 'p2' ? ALL_DATA.majorKeys : ALL_DATA.minorKeys;
+  const cur  = state.keys[state.mode];
+  const suffix = state.mode === 'p2' ? ' major' : ' minor';
+  sel.innerHTML = keys
+    .map(k => `<option value="${k}"${k === cur ? ' selected' : ''}>${k}${suffix}</option>`)
+    .join('');
+}
+
+document.getElementById('key-select').addEventListener('change', e => {
+  state.keys[state.mode] = e.target.value;
+  clearResolutionConstraint();
+  refreshGrid();
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const m = btn.dataset.mode;
+    if (m === state.mode) return;
+    state.mode = m;
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.mode').forEach(el =>
+      el.classList.toggle('active', el.id === 'mode-' + m));
+    clearResolutionConstraint();
+    populateKeySelect();
+    refreshGrid();
+  });
+});
+
+// ── Progression bar ───────────────────────────────────────────────────
+function addToProgression(name, roman, midiNotes) {
+  previewChord(midiNotes);
+  state.progression.push({ name, roman, midiNotes });
+  renderProgression();
+}
+
+function renderProgression() {
+  const container = document.getElementById('progression-chips');
+  const writeBtn  = document.getElementById('write-btn');
+  writeBtn.disabled = state.progression.length === 0;
+
+  if (state.progression.length === 0) {
+    container.innerHTML = '<span id="empty-msg">Click chords above to build a progression…</span>';
+    return;
+  }
+  container.innerHTML = '';
+  state.progression.forEach((item, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `
+      <span class="chip-roman">${item.roman}</span>
+      <span class="chip-name">${item.name}</span>
+      <span class="chip-x">✕</span>
+    `;
+    chip.addEventListener('click', () => {
+      state.progression.splice(idx, 1);
+      renderProgression();
+    });
+    container.appendChild(chip);
+  });
+}
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  state.progression = [];
+  renderProgression();
+  clearResolutionConstraint();
+});
+
+document.getElementById('write-btn').addEventListener('click', () => {
+  if (!state.progression.length) return;
+  closeWithResult({ action: 'write', progression: state.progression });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────
+populateKeySelect();
+refreshGrid();
+</script>
+</body>
+</html>

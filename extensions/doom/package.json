@@ -1,0 +1,20 @@
+{
+  "name": "doom",
+  "private": true,
+  "version": "0.0.2",
+  "type": "commonjs",
+  "main": "dist/extension.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "build": "node esbuild.js",
+    "build:prod": "node esbuild.js --production",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ableton/extensions-sdk": "file:../.."
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "vitest": "^3.2.1"
+  }
+}
