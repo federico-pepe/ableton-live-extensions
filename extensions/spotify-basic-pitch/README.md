@@ -1,5 +1,9 @@
 # Basic Pitch
 
+![Ableton Extension Basic Pitch](../../images/Ableton%20Extension%20-%20Basic%20Pitch.png)
+
+[⬇️ Download](../../download/spotify-basic-pitch.ablx)
+
 Converts any audio clip to a MIDI clip using Spotify's Basic Pitch neural network for polyphonic pitch detection. Runs entirely offline — no external software or internet connection required.
 
 ## Features
