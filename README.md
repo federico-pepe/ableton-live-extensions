@@ -1,8 +1,10 @@
 # Ableton Live Extensions Experiments
 
-Break what's expected. Make Live your own. Extensions are a new way to enhance Live's capabilities with powerfull tools that can speed up your workflow by automating repetitive tasks, sparkle or scramble new ideas and even more.
+*Break what's expected. Make Live your own.* 
 
-This repository is a collection of some of the extensions I've developed for you to try out, explore and edit.
+Extensions are a new way to enhance Live's capabilities with powerful tools that can speed up your workflow by automating repetitive tasks, sparkle or scramble new ideas and even more.
+
+This repository is a collection of some of the extensions I've developed for you to try out, explore and edit. Most of them are just tests designed to check out the SDK's capabilities.
 
 You can read more about Ableton Extensions here:
 
@@ -16,7 +18,7 @@ You can read more about Ableton Extensions here:
 
 ## Disclaimer
 
-I built most of these extensions with the help of Claude Code handling most of the heavy lifting on the code side. If that makes you uneasy or you're not on board with that approach, no worries at all. Either way, thanks a lot for taking the time to check it out.
+I built most of these extensions with the help of *Claude Code* handling most of the heavy lifting on the code side. If that makes you uneasy or you're not on board with that approach, no worries at all. Either way, thanks a lot for taking the time to check it out.
 
 A big thank you to **Rain** and **Jackie** for helping me building the Bird Game extension and make it look so good.
 
