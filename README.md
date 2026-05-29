@@ -8,6 +8,7 @@ You can read more about Ableton Extensions here:
 
 * [Ableton.com](https://www.ableton.com/en/live/extensions)
 * [Extension SDK](https://ableton.github.io/extensions-sdk)
+* [Join Ableton's Discord](https://discord.gg/ableton) to discuss about extensions
 
 ## Requirements
 

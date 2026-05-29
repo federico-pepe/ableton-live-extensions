@@ -1,7 +1,7 @@
 {
   "name": "basic-pitch-midi",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "commonjs",
   "main": "dist/extension.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "dependencies": {
     "@ableton/extensions-sdk": "file:../..",
     "@spotify/basic-pitch": "^1.0.1",
-    "audio-decode": "^2.2.3"
+"audio-decode": "^2.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

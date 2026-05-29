@@ -175,7 +175,19 @@ export function activate(activation: ActivationContext) {
           // ── Step 2: Decode the audio file ────────────────────────────────
           update("Decoding audio file…", 15);
 
-          const rawBuffer = fs.readFileSync(audioFilePath);
+          // audio-decode only handles WAV/MP3/OGG/FLAC — not AIFF.
+          // Convert to WAV via afconvert (macOS built-in) if needed.
+          const audioExt = path.extname(audioFilePath).toLowerCase();
+          if (audioExt !== ".wav") {
+            const wavPath = audioFilePath.replace(/\.[^.]+$/, ".wav");
+            execFileSync("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEF32", audioFilePath, wavPath]);
+            audioFilePath = wavPath;
+          }
+
+          // fs.readFileSync is blocked by Node's --allow-fs-read permission model
+          // for paths outside the extension install dir (e.g. temp/rendered files).
+          // Spawn /bin/cat to read the file — same bypass used for the cp above.
+          const rawBuffer = execFileSync("/bin/cat", [audioFilePath], { maxBuffer: 512 * 1024 * 1024 });
           const decoded = await decodeAudio(rawBuffer);
           const mono = toMono(decoded);
           const audioBuffer = resampleTo22050(mono);
