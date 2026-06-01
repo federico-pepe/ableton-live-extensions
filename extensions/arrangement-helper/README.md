@@ -2,7 +2,7 @@
 
 ![Arrangement Helper](../../images/Ableton%20Extension%20-%20Arrangement%20Helper.png)
 
-[⬇️ Download](../../download/arrangement-helper.ablx)
+[⬇️ Download](../../download/Arrangement-Helper-0.0.8.ablx)
 
 Builds a structured arrangement on a MIDI track by letting you define named sections with bar lengths and colors.
 

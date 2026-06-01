@@ -2,7 +2,7 @@
 
 ![Session to Arrangement Bridge](../../images/Ableton%20Extension%20-%20Session%20to%20Arrangement%20Bridge.png)
 
-[⬇️ Download](../../download/session-arrangement-bridge.ablx)
+[⬇️ Download](../../download/Session-to-Arrangement-Bridge-0.0.8.ablx)
 
 Transfers all clips from Session View into Arrangement View, preserving clip properties, timing, and structure.
 
