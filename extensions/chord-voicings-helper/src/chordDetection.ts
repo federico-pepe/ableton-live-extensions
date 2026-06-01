@@ -1,6 +1,6 @@
 import { Chord, Note } from "tonal";
-import type { NoteDescription } from "@ableton/extensions-sdk";
-import { pitchToClass } from "./utils";
+import type { NoteDescription } from "@ableton-extensions/sdk";
+import { pitchToClass } from "./utils.js";
 
 export interface ChordGroup {
   startTime: number;

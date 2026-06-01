@@ -1,5 +1,5 @@
-import { getChordTones } from "./chordDetection";
-import { closeVoicing, type Register } from "./voicingEngine";
+import { getChordTones } from "./chordDetection.js";
+import { closeVoicing, type Register } from "./voicingEngine.js";
 import { Note } from "tonal";
 
 // ─── Inversion / variant generation ──────────────────────────────────────────

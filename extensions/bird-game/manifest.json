@@ -1,0 +1,7 @@
+{
+    "name": "bird-game",
+    "author": "Federico Pepe",
+    "entry": "dist/extension.js",
+    "version": "1.0.0",
+    "minimumApiVersion": "1.0.0"
+}

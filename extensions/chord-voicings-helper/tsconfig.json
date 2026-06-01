@@ -1,9 +1,7 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": ".",
-    "lib": ["ES2020", "DOM"]
+    "module": "nodenext","target": "esnext","moduleResolution": "nodenext",
+    "outDir": "./dist","rootDir": "./src","strict": true,"esModuleInterop": true,"types": ["node"]
   },
-  "include": ["src/**/*", "dialog/**/*"]
+  "include": ["src/**/*"]
 }

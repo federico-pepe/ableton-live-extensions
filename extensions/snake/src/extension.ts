@@ -1,4 +1,4 @@
-import { initialize, type ActivationContext, MidiTrack } from "@ableton/extensions-sdk";
+import { initialize, type ActivationContext, type Handle, MidiTrack } from "@ableton-extensions/sdk";
 import gameHtml from "./game.html";
 
 interface NoteData {
@@ -16,13 +16,13 @@ interface GameResult {
 export async function activate(activation: ActivationContext) {
   const context = initialize(activation, "1.0.0");
 
-  context.commands.registerCommand("snake.play", async (handle) => {
-    const track = context.objects.getObjectFromHandle(handle, MidiTrack);
+  context.commands.registerCommand("snake.play", async (args: unknown) => {
+    const handle = args as Handle;
+    const track = context.getObjectFromHandle(handle, MidiTrack);
 
-    const dialog = context.createModalDialog();
     let raw: string;
     try {
-      raw = await dialog.show(
+      raw = await context.ui.showModalDialog(
         `data:text/html,${encodeURIComponent(gameHtml)}`,
         440,
         420,

@@ -12,7 +12,7 @@ import {
   type ArrangementSelection,
   type ActivationContext,
   type ClipLoopSettings,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 
 import dialogHtml from "./dialog.html";
 
@@ -135,7 +135,7 @@ export function activate(activation: ActivationContext) {
 
         // Resolve the first selected MIDI track
         const lane = selection.selected_lanes
-          .map((h) => api.objects.getObjectFromHandle(h, DataModelObject))
+          .map((h) => api.getObjectFromHandle(h, DataModelObject))
           .find((obj) => obj instanceof MidiTrack);
 
         if (!(lane instanceof MidiTrack)) {
@@ -186,7 +186,7 @@ export function activate(activation: ActivationContext) {
         );
 
         // ── Show dialog ──────────────────────────────────────────────────────
-        const resultStr = await api.createModalDialog().show(
+        const resultStr = await api.ui.showModalDialog(
           `data:text/html,${encodeURIComponent(htmlWithData)}`,
           580,
           530,
@@ -336,13 +336,13 @@ export function activate(activation: ActivationContext) {
             createOps.map((op) =>
               op.kind === "midi"
                 ? op.track.createMidiClip(op.start, op.duration)
-                : op.track.createAudioClip(
-                    op.filePath,
-                    op.start,
-                    op.duration,
-                    op.isWarped,
-                    op.loopSettings,
-                  ),
+                : op.track.createAudioClip({
+                    filePath: op.filePath,
+                    startTime: op.start,
+                    duration: op.duration,
+                    isWarped: op.isWarped,
+                    loopSettings: op.loopSettings,
+                  }),
             ),
           ),
         );
