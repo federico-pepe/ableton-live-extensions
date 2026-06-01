@@ -258,13 +258,15 @@
   </div>
 
   <!--
-    BUILD STEP: esbuild's inlineDoomAssetsPlugin replaces these two comments
-    with actual inline <script> tags containing the bundled assets.
-    __JSDOS_SCRIPT_PLACEHOLDER__   → js-dos.js runtime (inlined JS source)
-    __DOOM_BUNDLE_PLACEHOLDER__    → doom.jsdos as base64 const
+    Fully offline: the extension writes this HTML plus js-dos.js, js-dos.css,
+    doom.jsdos and the emulators/ folder (emulators.js, wdosbox.js/.wasm,
+    wlibzip.js/.wasm) into a temp directory and serves them from a private
+    http://localhost server. js-dos resolves its emulator core from the local
+    "./emulators/" folder (set via the pathPrefix option below) — no internet
+    access required; localhost just satisfies the webview's fetch/Worker rules.
   -->
-  <!-- __JSDOS_SCRIPT_PLACEHOLDER__ -->
-  <!-- __DOOM_BUNDLE_PLACEHOLDER__ -->
+  <link rel="stylesheet" href="./js-dos.css">
+  <script src="./js-dos.js"></script>
 
   <script>
     // ── Messaging helpers ───────────────────────────────────────
@@ -313,49 +315,35 @@
     // ── Boot js-dos with the bundled DOOM WAD ───────────────────
     window.addEventListener("load", function () {
       try {
-        // Verify the js-dos runtime was inlined successfully
+        // Verify the js-dos runtime loaded from the sibling ./js-dos.js file
         if (typeof Dos === "undefined") {
           showError(
-            "js-dos runtime is missing from the bundle.",
-            "Re-run: node setup.js && node esbuild.js"
+            "js-dos runtime failed to load.",
+            "The extension could not write js-dos.js to its temp folder."
           );
           return;
         }
-
-        // Verify the DOOM bundle constant was injected
-        if (typeof __DOOM_BUNDLE_B64__ === "undefined" || !__DOOM_BUNDLE_B64__) {
-          showError(
-            "DOOM bundle is missing from the extension.",
-            "Re-run: node setup.js && node esbuild.js"
-          );
-          return;
-        }
-
-        setProgress(20, "DECODING DOOM BUNDLE...");
-
-        // Decode the base64 bundle into a Uint8Array, then into a Blob URL
-        // so js-dos can fetch() it (it expects a URL, not raw bytes)
-        const binary = atob(__DOOM_BUNDLE_B64__);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: "application/octet-stream" });
-        const bundleUrl = URL.createObjectURL(blob);
 
         setProgress(40, "INITIALIZING DOS EMULATOR...");
 
         const container = document.getElementById("dos-container");
 
+        // Load the DOOM bundle and the emulator core (wdosbox/wlibzip wasm)
+        // from local files written next to this page. pathPrefix points js-dos
+        // at the local ./emulators/ folder so nothing is fetched over the network.
         const dos = Dos(container, {
-          url: bundleUrl,
+          url: "./doom.jsdos",
+          pathPrefix: "./emulators/",
           autoStart: true,
+          kiosk: true, // hide the js-dos sidebar — run the game full-area
+          noCloud: true, // no cloud/login UI
+          mouseCapture: false, // no "Click to capture mouse" pointer-lock overlay
           onEvent: function (event, args) {
             if (event === "ci-ready") {
               setProgress(70, "LOADING DOOM WAD...");
             } else if (event === "ci-frame") {
               setProgress(100, "RIP AND TEAR!");
               setTimeout(hideLoading, 400);
-              // Release the blob URL — it's loaded into WASM memory now
-              URL.revokeObjectURL(bundleUrl);
             } else if (event === "error") {
               showError(
                 "DOOM engine error: " + ((args && args.message) || "unknown"),
