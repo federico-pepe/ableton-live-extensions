@@ -1,13 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "module": "nodenext","target": "esnext","moduleResolution": "nodenext",
+    "outDir": "./dist","rootDir": "./src","strict": true,"esModuleInterop": true,"types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts"]
 }

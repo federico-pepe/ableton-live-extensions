@@ -2,7 +2,7 @@
 
 ![Transpose Clips](../../images/Ableton%20Extension%20-%20Transpose.png)
 
-[⬇️ Download](../../download/transposer.ablx)
+[⬇️ Download](../../download/Transpose-Clips-0.1.0.ablx)
 
 Transposes every MIDI clip in the Live Set by a chosen number of semitones, with a cancellable progress dialog.
 

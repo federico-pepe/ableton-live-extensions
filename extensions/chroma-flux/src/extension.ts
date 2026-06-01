@@ -1,4 +1,4 @@
-import type { Handle } from "@ableton/extensions-sdk";
+import type { Handle } from "@ableton-extensions/sdk";
 import {
   initialize,
   Track,
@@ -6,7 +6,7 @@ import {
   RackDevice,
   type ActivationContext,
   type DeviceParameter,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 
 // Import the HTML interface for the modal dialog
 import uiHtml from "./ui.html";
@@ -133,13 +133,11 @@ export function activate(activation: ActivationContext) {
   context.commands.registerCommand(
     "chromaflux.open",
     (args: unknown) => ((handle: Handle) => {
-      const track = context.objects.getObjectFromHandle(handle, Track);
-
-      const dialog = context.createModalDialog();
+      const track = context.getObjectFromHandle(handle, Track);
 
       // Open the modal dialog
-      dialog
-        .show(`data:text/html,${encodeURIComponent(uiHtml)}`, 620, 560)
+      context.ui
+        .showModalDialog(`data:text/html,${encodeURIComponent(uiHtml)}`, 620, 560)
         .then((result) => {
           if (!result) return; // User cancelled
 
@@ -161,7 +159,7 @@ export function activate(activation: ActivationContext) {
   );
 
   // Register context menu actions for AudioTrack and MidiTrack
-  ["AudioTrack", "MidiTrack"].forEach((scope) => {
+  (["AudioTrack", "MidiTrack"] as const).forEach((scope) => {
     context.ui.registerContextMenuAction(
       scope,
       "Edit device parameters",

@@ -1,0 +1,26 @@
+{
+  "name": "bird-game",
+  "version": "1.0.0",
+  "main": "dist/extension.js",
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && tsx build.ts --production",
+    "build:dev": "tsc --noEmit && tsx build.ts",
+    "start": "npm run build:dev && extensions-cli run",
+    "package": "npm run build && extensions-cli package"
+  },
+  "dependencies": {
+    "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz"
+  },
+  "devDependencies": {
+    "@ableton-extensions/cli": "file:./vendor/ableton-extensions-cli-1.0.0-beta.0.tgz",
+    "@types/node": "^25.9.1",
+    "esbuild": "0.28.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0"
+  }
+}

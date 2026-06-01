@@ -2,7 +2,7 @@
 
 ![Track Creator](../../images/Ableton%20Extension%20-%20Track%20Creator.png)
 
-[⬇️ Download](../../download/track-creator.ablx)
+[⬇️ Download](../../download/Track-Creator-0.0.6.ablx)
 
 Creates multiple audio or MIDI tracks at once from a simple dialog.
 

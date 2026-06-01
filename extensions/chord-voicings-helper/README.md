@@ -2,7 +2,7 @@
 
 ![Chord Voicing Helper](../../images/Ableton%20Extension%20-%20Chord%20Voicing.png)
 
-[⬇️ Download](../../download/chord-voicings-helper.ablx)
+[⬇️ Download](../../download/Chord-Voicing-Helper-1.0.2.ablx)
 
 Reads notes from a MIDI clip, detects the chord, and lets you apply a voicing strategy — with piano, staff, and guitar visualizations before you commit.
 

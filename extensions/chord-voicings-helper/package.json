@@ -1,20 +1,26 @@
 {
   "name": "chord-voicings-helper",
-  "version": "1.0.1",
+  "private": true,
+  "version": "1.0.2",
+  "type": "module",
   "main": "dist/extension.js",
+  "engines": { "node": ">=22.11.0" },
   "scripts": {
-    "build": "node esbuild.js && tsc --noEmit",
-    "build:production": "node esbuild.js --production && tsc --noEmit",
-    "watch": "node esbuild.js --watch"
+    "build": "tsc --noEmit && tsx build.ts --production",
+    "build:dev": "tsc --noEmit && tsx build.ts",
+    "start": "npm run build:dev && extensions-cli run",
+    "package": "npm run build && extensions-cli package"
   },
   "dependencies": {
-    "@ableton/extensions-sdk": "file:../../",
+    "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz",
     "tonal": "^6.4.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
+    "@ableton-extensions/cli": "file:./vendor/ableton-extensions-cli-1.0.0-beta.0.tgz",
+    "@types/node": "^25.9.1",
+    "esbuild": "0.28.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
     "vexflow": "^4.2.2",
     "vexchords": "^1.2.0"
   }

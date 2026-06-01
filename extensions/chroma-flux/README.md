@@ -2,7 +2,7 @@
 
 ![ChromaFlux](../../images/Ableton%20Extension%20-%20Chroma%20Flux.png)
 
-[⬇️ Download](../../download/chroma-flux.ablx)
+[⬇️ Download](../../download/ChromaFlux-0.0.7.ablx)
 
 A parameter randomizer for Instrument Racks. Randomizes device parameters across selected tracks with configurable mode and intensity.
 

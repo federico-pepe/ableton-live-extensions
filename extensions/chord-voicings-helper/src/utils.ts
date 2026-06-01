@@ -1,4 +1,4 @@
-import type { NoteDescription } from "@ableton/extensions-sdk";
+import type { NoteDescription } from "@ableton-extensions/sdk";
 import { Note } from "tonal";
 
 export function pitchToName(pitch: number): string {

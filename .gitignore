@@ -2,6 +2,10 @@
 extensions/*/dist/
 extensions/*/node_modules/
 
+.vscode
+.claude
+backup/
+
 # Logs
 logs
 *.log
@@ -65,6 +69,9 @@ web_modules/
 
 # Output of 'npm pack'
 *.tgz
+# ...but keep the vendored Ableton Extensions SDK + CLI so the repo builds from a clean clone
+!extensions/*/vendor/
+!extensions/*/vendor/*.tgz
 
 # Yarn Integrity file
 .yarn-integrity

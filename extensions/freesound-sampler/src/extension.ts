@@ -9,7 +9,7 @@ import {
   ClipSlot,
   type ActivationContext,
   type Handle,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 import dialogHtml from "./dialog.html";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -212,9 +212,8 @@ export async function activate(activation: ActivationContext) {
         // Triggered from Arrangement View
         const sel = arg;
         if (!sel.selected_lanes || sel.selected_lanes.length === 0) {
-          const errDialog = context.createModalDialog();
           try {
-            await errDialog.show(
+            await context.ui.showModalDialog(
               `data:text/html,${encodeURIComponent(makeErrorHtml("No track selected in Arrangement View."))}`,
               480, 200,
             );
@@ -222,14 +221,13 @@ export async function activate(activation: ActivationContext) {
           return;
         }
         try {
-          track = context.objects.getObjectFromHandle(sel.selected_lanes[0], AudioTrack);
+          track = context.getObjectFromHandle(sel.selected_lanes[0], AudioTrack);
           arrangementStartTime = sel.time_selection_start;
           console.log("[freesound-sampler] Arrangement view: track=%s, startTime=%s", track.name, arrangementStartTime);
         } catch (err) {
           console.error("[freesound-sampler] Failed to get AudioTrack from ArrangementSelection:", err);
-          const errDialog = context.createModalDialog();
           try {
-            await errDialog.show(
+            await context.ui.showModalDialog(
               `data:text/html,${encodeURIComponent(makeErrorHtml("Could not resolve track. Make sure you right-clicked an Audio Track lane."))}`,
               480, 200,
             );
@@ -239,13 +237,12 @@ export async function activate(activation: ActivationContext) {
       } else {
         // Triggered from Session View — arg is a Handle to the track
         try {
-          track = context.objects.getObjectFromHandle(arg as Handle, AudioTrack);
+          track = context.getObjectFromHandle(arg as Handle, AudioTrack);
           console.log("[freesound-sampler] Session view: track=%s", track.name);
         } catch (err) {
           console.error("[freesound-sampler] Failed to get AudioTrack:", err);
-          const errDialog = context.createModalDialog();
           try {
-            await errDialog.show(
+            await context.ui.showModalDialog(
               `data:text/html,${encodeURIComponent(makeErrorHtml("Error: Invalid track reference. Make sure you right-clicked an Audio Track.\n\nDetails: " + String(err instanceof Error ? err.message : err)))}`,
               500, 240,
             );
@@ -270,11 +267,10 @@ export async function activate(activation: ActivationContext) {
       const html = dialogHtml.replace("</head>", initScript + "</head>");
 
       // Show search/results dialog
-      const dialog = context.createModalDialog();
       let raw: string;
       try {
         console.log("[freesound-sampler] Opening dialog...");
-        raw = await dialog.show(
+        raw = await context.ui.showModalDialog(
           `data:text/html,${encodeURIComponent(html)}`,
           560,
           410,
@@ -305,7 +301,7 @@ export async function activate(activation: ActivationContext) {
       // Download and create clip
       try {
         console.log("[freesound-sampler] Starting progress dialog for:", result!.name);
-        await context.withinProgressDialog(
+        await context.ui.withinProgressDialog(
           "Freesound Sampler",
           { progress: 0 },
           async (update, signal) => {
@@ -338,22 +334,21 @@ export async function activate(activation: ActivationContext) {
             if (arrangementStartTime !== null) {
               // Arrangement view: place at the time selection start
               clip = await context.withinTransaction(() =>
-                track.createAudioClip(filePath, arrangementStartTime!, undefined, true),
+                track.createAudioClip({ filePath, startTime: arrangementStartTime!, isWarped: true }),
               );
             } else {
               // Session view: prefer empty slot, fallback to arrangement end
               const emptySlot = findFirstEmptySlot(track);
               clip = emptySlot
                 ? await context.withinTransaction(() =>
-                    emptySlot.createAudioClip(filePath, true),
+                    emptySlot.createAudioClip({ filePath, isWarped: true }),
                   )
                 : await context.withinTransaction(() =>
-                    track.createAudioClip(
+                    track.createAudioClip({
                       filePath,
-                      findArrangementEnd(track),
-                      undefined,
-                      true,
-                    ),
+                      startTime: findArrangementEnd(track),
+                      isWarped: true,
+                    }),
                   );
             }
 
@@ -372,9 +367,8 @@ export async function activate(activation: ActivationContext) {
           return;
         }
         console.error("[freesound-sampler] Error:", err);
-        const errDialog = context.createModalDialog();
         try {
-          await errDialog.show(
+          await context.ui.showModalDialog(
             `data:text/html,${encodeURIComponent(makeErrorHtml(String(err instanceof Error ? err.message : err)))}`,
             480,
             220,

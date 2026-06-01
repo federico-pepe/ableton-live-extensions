@@ -2,7 +2,7 @@
 
 ![Snake](../../images/Ableton%20Extension%20-%20Snake.png)
 
-[⬇️ Download](../../download/snake.ablx)
+[⬇️ Download](../../download/Snake-0.0.7.ablx)
 
 Play Snake inside Ableton Live and turn your gameplay into a MIDI clip.
 

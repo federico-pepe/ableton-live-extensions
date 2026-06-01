@@ -1,4 +1,4 @@
-import { initialize, type ActivationContext } from "@ableton/extensions-sdk";
+import { initialize, type ActivationContext } from "@ableton-extensions/sdk";
 import dialogHtml from "./dialog.html";
 
 interface DialogResult {
@@ -14,10 +14,9 @@ export async function activate(activation: ActivationContext) {
     const song = context.application.song;
     const html = dialogHtml;
 
-    const dialog = context.createModalDialog();
     let raw: string;
     try {
-      raw = await dialog.show(`data:text/html,${encodeURIComponent(html)}`, 380, 310);
+      raw = await context.ui.showModalDialog(`data:text/html,${encodeURIComponent(html)}`, 380, 310);
     } catch {
       return;
     }

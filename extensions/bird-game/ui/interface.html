@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bird Game MIDI MIDI</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --accent: #e94560;
+      --text: #eaeaea;
+      --muted: #888;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 6px;
+      overflow: hidden;
+      user-select: none;
+    }
+    #hud {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    #hud span { color: var(--accent); font-weight: bold; }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 3px;
+      display: block;
+      cursor: pointer;
+    }
+    #hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    #piano-roll {
+      width: 460px;
+      height: 28px;
+      background: #111;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #222;
+    }
+    .note-block {
+      position: absolute;
+      height: 100%;
+      background: var(--accent);
+      opacity: 0.8;
+      border-right: 1px solid #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="460" height="280"></canvas>
+  <div id="hint">SPACE / CLICK to flap &nbsp;·&nbsp; ESC to finish &amp; write MIDI</div>
+  <div id="piano-roll"></div>
+
+  <script>
+    // Injected by extension before encoding
+    const TEMPO = __TEMPO__;
+    const ROOT = __ROOT__;
+    const SCALE_NAME = __SCALE__;
+
+    // ── messaging ─────────────────────────────────────────────────────────
+    function closeWithResult(result) {
+      const msg = { method: "close_and_send", params: [JSON.stringify(result)] };
+      if (window.webkit?.messageHandlers?.live) {
+        window.webkit.messageHandlers.live.postMessage(msg);
+      } else if (window.chrome?.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    // ── sound effects ───────────────────────────────────────────────────────
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let flapBuffer, splatBuffer;
+
+    async function loadSound(dataUri) {
+      try {
+        const resp = await fetch(dataUri);
+        const arrayBuf = await resp.arrayBuffer();
+        return await audioCtx.decodeAudioData(arrayBuf);
+      } catch(e) { console.warn("Failed to load sound:", e); return null; }
+    }
+
+    (async function initSounds() {
+      flapBuffer = await loadSound(__FLAP_DATA__);
+      splatBuffer = await loadSound(__SPLAT_DATA__);
+    })();
+
+    function playSound(buffer) {
+      if (!buffer || !audioCtx) return;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
+    }
+
+    // ── music ─────────────────────────────────────────────────────────────
+    const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+    const CHROMATIC = [0,1,2,3,4,5,6,7,8,9,10,11];
+    const SCALE_INTERVALS = {
+      "Major":            [0,2,4,5,7,9,11],
+      "Minor":            [0,2,3,5,7,8,10],
+      "Dorian":           [0,2,3,5,7,9,10],
+      "Phrygian":         [0,1,3,5,7,8,10],
+      "Lydian":           [0,2,4,6,7,9,11],
+      "Mixolydian":       [0,2,4,5,7,9,10],
+      "Locrian":          [0,1,3,5,6,8,10],
+      "Major Pentatonic": [0,2,4,7,9],
+      "Minor Pentatonic": [0,3,5,7,10],
+      "Major Blues":      [0,2,3,4,7,9],
+      "Minor Blues":      [0,3,5,6,7,10],
+      "Whole Tone":       [0,2,4,6,8,10],
+      "Diminished":       [0,2,3,5,6,8,9,11],
+      "Harmonic Minor":   [0,2,3,5,7,8,11],
+      "Melodic Minor":    [0,2,3,5,7,9,11],
+      "Hungarian Minor":  [0,2,3,6,7,8,11],
+      "Iwato":            [0,1,5,6,10],
+      "Hirajoshi":        [0,2,3,7,8],
+      "In-Sen":           [0,1,5,7,10],
+      "Gypsy":            [0,2,3,6,7,8,10],
+      "Spanish":          [0,1,4,5,7,8,10],
+      "Chromatic":        CHROMATIC,
+    };
+    const INTERVALS = SCALE_INTERVALS[SCALE_NAME] || CHROMATIC;
+
+    // Build SCALE across the full MIDI range (0–127), rooted at Live's root note.
+    const SCALE = [];
+    for (let oct = -1; oct <= 10; oct++) {
+      for (const offset of INTERVALS) {
+        const pitch = 12 + oct * 12 + ROOT + offset;
+        if (pitch >= 0 && pitch <= 127) SCALE.push(pitch);
+      }
+    }
+    SCALE.sort((a, b) => a - b);
+
+    // The bird is a circle (radius 18) that collides with the top edge and
+    // the ground (y = H - GROUND_H + 10). Map only the *actually reachable*
+    // y range — empty space above the ground that the bird never visits
+    // wastes pitch resolution.
+    const BIRD_SCALE = 0.75;
+    const BIRD_R = Math.round(18 * BIRD_SCALE); // 14
+
+    // Fixed linear mapping over the bird's reachable y range. Higher on
+    // screen = higher pitch, always — no adaptive cap that moves with the bird.
+    const PLAYABLE_TOP = BIRD_R;                    // 14
+    const PLAYABLE_BOTTOM = 280 - 50 + 10 - BIRD_R; // 226
+
+    function yToPitch(y) {
+      const span = PLAYABLE_BOTTOM - PLAYABLE_TOP;
+      const t = 1 - Math.max(0, Math.min(1, (y - PLAYABLE_TOP) / span));
+      return SCALE[Math.round(t * (SCALE.length - 1))];
+    }
+
+    function pitchName(midi) {
+      return NOTE_NAMES[midi % 12] + Math.floor(midi / 12 - 1);
+    }
+
+    // ── constants ─────────────────────────────────────────────────────────
+    const W = 460, H = 280;
+    const GRAVITY = 0.2;
+    const FLAP = -3;
+    const PIPE_SPEED = 2.0;
+    const PIPE_W = 46;
+    const PIPE_GAP = 88;
+    const PIPE_SPAWN_DIST = 180; // px between pipe spawns
+    const GROUND_H = 50;         // visible ground height (eats into play area)
+    const MS_PER_BEAT = (60 / TEMPO) * 1000;
+
+    // ── state ─────────────────────────────────────────────────────────────
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Hi-DPI: backing store at device pixels, CSS size in logical pixels,
+    // and pre-scale the context so all drawing code stays in logical units.
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.scale(DPR, DPR);
+
+    let bird, pipes, notes, started, gameOver, startTime, lastBeatIndex, pipeSpawnX, score, roundStartBeat;
+
+    function initState() {
+      notes = [];
+      lastBeatIndex = -1;
+      resetRound();
+    }
+
+    // Reset round-local state (bird, pipes, timing) without clearing accumulated notes.
+    function resetRound() {
+      bird = { x: 90, y: H / 2, vy: FLAP };
+      pipes = [];
+      started = false;
+      gameOver = false;
+      startTime = 0;
+      pipeSpawnX = W;
+      score = 0;
+      // each new round's beats continue numbering after the last recorded beat
+      roundStartBeat = lastBeatIndex + 1;
+    }
+    initState();
+
+    // ── input ─────────────────────────────────────────────────────────────
+    function flap() {
+      if (gameOver) { resetRound(); started = true; startTime = Date.now(); spawnPipe(); return; }
+      if (!started) { started = true; startTime = Date.now(); spawnPipe(); }
+      bird.vy = FLAP;
+      playSound(flapBuffer);
+    }
+
+    function finish() {
+      closeWithResult({ notes, totalBeats: lastBeatIndex + 1 });
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); flap(); }
+      if (e.code === "Escape") finish();
+    });
+    canvas.addEventListener("click", flap);
+
+    // ── pipes ─────────────────────────────────────────────────────────────
+    function spawnPipe() {
+      const topH = 30 + Math.random() * (H - GROUND_H - PIPE_GAP - 60);
+      pipes.push({ x: W + PIPE_W, topH, passed: false });
+    }
+
+    // ── piano roll ────────────────────────────────────────────────────────
+    const ROLL_W = 460;
+    const DISPLAY_BEATS = 32; // how many beats to show at once
+
+    function addNoteToRoll(beatIndex, pitch) {
+      const roll = document.getElementById("piano-roll");
+      const block = document.createElement("div");
+      block.className = "note-block";
+
+      // x: position within rolling window
+      const xPct = ((beatIndex % DISPLAY_BEATS) / DISPLAY_BEATS) * 100;
+      // y (top edge): low pitch → bottom, high pitch → top
+      const pitchIdx = SCALE.indexOf(pitch);
+      const yPct = (1 - pitchIdx / (SCALE.length - 1)) * 80; // leave 20% margin
+      const heightPct = 20;
+
+      block.style.left = xPct + "%";
+      block.style.width = (100 / DISPLAY_BEATS) + "%";
+      block.style.top = yPct + "%";
+      block.style.height = heightPct + "%";
+
+      // fade older notes
+      if (beatIndex >= DISPLAY_BEATS) {
+        const oldX = xPct;
+        Array.from(roll.children).forEach((el) => {
+          const elLeft = parseFloat(el.style.left);
+          if (Math.abs(elLeft - oldX) < 0.1) el.remove();
+        });
+      }
+      roll.appendChild(block);
+    }
+
+    // ── game loop ─────────────────────────────────────────────────────────
+    function update() {
+      if (!started || gameOver) return;
+
+      const elapsed = Date.now() - startTime;
+
+      // physics
+      bird.vy += GRAVITY;
+      bird.y += bird.vy;
+
+      // spawn pipes by distance traveled
+      pipeSpawnX -= PIPE_SPEED;
+      if (pipeSpawnX <= 0) {
+        pipeSpawnX = PIPE_SPAWN_DIST;
+        spawnPipe();
+      }
+
+      // move pipes
+      for (const p of pipes) p.x -= PIPE_SPEED;
+      pipes = pipes.filter((p) => p.x > -PIPE_W - 20);
+
+      // scoring
+      for (const p of pipes) {
+        if (!p.passed && p.x + PIPE_W < bird.x) { p.passed = true; score++; }
+      }
+
+      // collision
+      const br = BIRD_R;
+      for (const p of pipes) {
+        if (bird.x + br > p.x && bird.x - br < p.x + PIPE_W) {
+          if (bird.y - br < p.topH || bird.y + br > p.topH + PIPE_GAP) {
+            playSound(splatBuffer);
+            gameOver = true; return;
+          }
+        }
+      }
+      if (bird.y + br > H - GROUND_H + 10 || bird.y - br < 0) { gameOver = true; return; }
+
+      // record a note every beat (beat numbering continues across rounds)
+      const beatIndex = Math.floor(elapsed / MS_PER_BEAT) + roundStartBeat;
+      if (beatIndex > lastBeatIndex) {
+        lastBeatIndex = beatIndex;
+        const pitch = yToPitch(bird.y);
+        const velocity = 64 + Math.round(Math.abs(bird.vy) * 4);
+        notes.push({ pitch, startTime: beatIndex, duration: 1, velocity });
+        addNoteToRoll(beatIndex, pitch);
+      }
+    }
+
+    // ── drawing ───────────────────────────────────────────────────────────
+    const bgStart = Date.now();
+
+    function drawCloud(x, y, scale) {
+      ctx.fillStyle = '#FFF';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 15 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x + 12 * scale, y - 5 * scale, 12 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x + 22 * scale, y, 14 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x + 10 * scale, y + 8 * scale, 11 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // cute face
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.arc(x + 8 * scale, y - 2 * scale, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + 18 * scale, y - 2 * scale, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x + 13 * scale, y + 2 * scale, 5 * scale, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+
+    // Tileable hills via summed sines so the parallax wraps seamlessly.
+    function drawHills(offset) {
+      ctx.fillStyle = '#7BCF6E';
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      const step = 6;
+      for (let x = 0; x <= W; x += step) {
+        const u = x + offset;
+        const y = 240 + Math.sin(u / 60) * 14 + Math.cos(u / 33) * 6;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += step) {
+        const u = x + offset;
+        const y = 240 + Math.sin(u / 60) * 14 + Math.cos(u / 33) * 6;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Pre-render the ground design into an offscreen canvas tile so the
+    // random dirt patches stay fixed in the tile and we can tile + scroll it cheaply.
+    const GROUND_TILE_W = 400;
+    const GROUND_TILE_H = 80;
+    const groundTile = document.createElement('canvas');
+    groundTile.width = GROUND_TILE_W * DPR;
+    groundTile.height = GROUND_TILE_H * DPR;
+    (function renderGroundTile() {
+      const g = groundTile.getContext('2d');
+      g.scale(DPR, DPR);
+
+      // dirt base
+      g.fillStyle = '#C68B59';
+      g.fillRect(0, 0, GROUND_TILE_W, GROUND_TILE_H);
+
+      // wonky grass top
+      g.fillStyle = '#7BCF6E';
+      g.strokeStyle = '#333';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(0, 10);
+      const peaks = [5,12,8,15,10,6,13,9,14,8,12,7,11,15,9,13,8,14,10,12];
+      for (let i = 0; i < peaks.length; i++) {
+        g.lineTo((i + 1) * 20, peaks[i]);
+      }
+      g.lineTo(GROUND_TILE_W, 25);
+      g.lineTo(0, 25);
+      g.closePath();
+      g.fill();
+      g.stroke();
+
+      // dirt patches
+      g.fillStyle = 'rgba(101, 67, 33, 0.4)';
+      for (let i = 0; i < 15; i++) {
+        const x = Math.random() * GROUND_TILE_W;
+        const y = 25 + Math.random() * 50;
+        const size = 3 + Math.random() * 5;
+        g.beginPath();
+        g.arc(x, y, size, 0, Math.PI * 2);
+        g.fill();
+      }
+
+      // flowers
+      const flower = (x, y) => {
+        g.strokeStyle = '#4D7C0F';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x, y - 12);
+        g.stroke();
+
+        g.fillStyle = '#FF69B4';
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2;
+          const px = x + Math.cos(angle) * 5;
+          const py = y - 12 + Math.sin(angle) * 5;
+          g.beginPath();
+          g.arc(px, py, 3, 0, Math.PI * 2);
+          g.fill();
+        }
+        g.fillStyle = '#FFD700';
+        g.beginPath();
+        g.arc(x, y - 12, 3, 0, Math.PI * 2);
+        g.fill();
+      };
+      flower(50, 20);
+      flower(150, 18);
+      flower(280, 22);
+    })();
+
+    function drawGround() {
+      const t = (Date.now() - bgStart) / 1000;
+      const speed = 120; // matches world-scroll (PIPE_SPEED * 60fps)
+      const offset = (t * speed) % GROUND_TILE_W;
+      const y = H - GROUND_H;
+      for (let x = -offset; x < W; x += GROUND_TILE_W) {
+        ctx.drawImage(groundTile, x, y, GROUND_TILE_W, GROUND_TILE_H);
+      }
+    }
+
+    function drawBackground() {
+      const t = (Date.now() - bgStart) / 1000;
+
+      // sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#87CEEB');
+      sky.addColorStop(1, '#B4E4FF');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+
+      // clouds — slow parallax, wrap across screen
+      const cloudSpeed = 8; // px/s
+      const cloudPeriod = W + 100;
+      const cloudOffset = (t * cloudSpeed) % cloudPeriod;
+      const cloudBases = [
+        [80, 50, 1.0],
+        [250, 70, 0.8],
+        [350, 40, 0.9],
+        [520, 60, 0.7],
+      ];
+      for (const [cx, cy, s] of cloudBases) {
+        let x = cx - cloudOffset;
+        if (x < -50) x += cloudPeriod;
+        drawCloud(x, cy, s);
+      }
+
+      // hills — faster parallax (still slower than pipes)
+      const hillSpeed = 28; // px/s
+      drawHills(t * hillSpeed);
+    }
+
+    function draw() {
+      drawBackground();
+
+      if (!started) {
+        drawGround();
+        drawIdleScreen();
+        drawBird();
+        return;
+      }
+
+      drawPipes();
+      drawGround();
+      drawBird();
+
+      if (gameOver) drawDeadScreen();
+    }
+
+    function drawIdleScreen() {
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 15px Lucida Grande, sans-serif";
+      ctx.fillText("SPACE or CLICK to start", W / 2, H / 2 - 10);
+      ctx.fillStyle = "#444";
+      ctx.font = "11px Lucida Grande, sans-serif";
+      ctx.fillText("Your flight path becomes a MIDI melody", W / 2, H / 2 + 12);
+      ctx.fillText(`Tempo: ${TEMPO} BPM  ·  Scale: ${NOTE_NAMES[ROOT]} ${SCALE_NAME}`, W / 2, H / 2 + 28);
+    }
+
+    function drawDeadScreen() {
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#e94560";
+      ctx.font = "bold 26px Lucida Grande, sans-serif";
+      ctx.fillText("SPLAT", W / 2, H / 2 - 14);
+      ctx.fillStyle = "#eaeaea";
+      ctx.font = "12px Lucida Grande, sans-serif";
+      ctx.fillText(`${notes.length} notes recorded over ${lastBeatIndex + 1} beats`, W / 2, H / 2 + 10);
+      ctx.font = "11px Lucida Grande, sans-serif";
+      ctx.fillText("SPACE to try again  ·  ESC to write MIDI and close", W / 2, H / 2 + 28);
+    }
+
+    // Draws one pipe segment (body + cap on the open end + stripes + polka dots).
+    // capAtTop=true → cap sits at `top` (used for bottom pipe);
+    // capAtTop=false → cap sits at `bottom` (used for top pipe).
+    function drawPipeSegment(x, w, top, bottom, capAtTop) {
+      const bodyH = bottom - top;
+      if (bodyH <= 0) return;
+
+      // Main pipe body
+      ctx.fillStyle = '#6BCB77';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.fillRect(x, top, w, bodyH);
+      ctx.strokeRect(x, top, w, bodyH);
+
+      // Pipe lip (cap on the open end)
+      ctx.fillStyle = '#4D96A9';
+      const capY = capAtTop ? top : bottom - 15;
+      ctx.fillRect(x - 5, capY, w + 10, 15);
+      ctx.strokeRect(x - 5, capY, w + 10, 15);
+
+      // Texture stripes
+      ctx.strokeStyle = '#4D96A9';
+      ctx.lineWidth = 1.5;
+      for (let i = top + 15; i < bottom - 5; i += 18) {
+        ctx.beginPath();
+        ctx.moveTo(x + 3, i);
+        ctx.lineTo(x + w - 3, i);
+        ctx.stroke();
+      }
+
+      // Cute polka dots (positions relative to body)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      const dots = [[12, 0.15], [28, 0.30], [18, 0.55], [32, 0.78], [15, 0.90]];
+      for (const [dx, dyFrac] of dots) {
+        const py = top + dyFrac * bodyH;
+        if (py > top + 6 && py < bottom - 6) {
+          ctx.beginPath();
+          ctx.arc(x + dx, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawPipes() {
+      for (const p of pipes) {
+        // top pipe: body 0..topH, cap at bottom (open end faces down)
+        drawPipeSegment(p.x, PIPE_W, 0, p.topH, false);
+        // bottom pipe: body topH+GAP..groundline, cap at top (open end faces up)
+        drawPipeSegment(p.x, PIPE_W, p.topH + PIPE_GAP, H - GROUND_H + 5, true);
+      }
+    }
+
+    function drawBird() {
+      const { x, y, vy } = bird;
+      ctx.save();
+      ctx.translate(x, y);
+      const tilt = gameOver ? Math.PI / 2 : Math.max(-0.5, Math.min(0.6, vy * 0.06));
+      ctx.rotate(tilt);
+      ctx.scale(BIRD_SCALE, BIRD_SCALE);
+
+      // designer's drawing is centered at (50, 50); shift so it draws around origin
+      ctx.translate(-50, -50);
+
+      const centerX = 50;
+      const centerY = 50;
+
+      // Body (lumpy, uneven blob)
+      ctx.fillStyle = '#FFD93D';
+      ctx.beginPath();
+      ctx.moveTo(centerX - 20, centerY);
+      ctx.quadraticCurveTo(centerX - 22, centerY - 15, centerX - 5, centerY - 18);
+      ctx.quadraticCurveTo(centerX + 15, centerY - 20, centerX + 22, centerY - 8);
+      ctx.quadraticCurveTo(centerX + 25, centerY + 5, centerX + 18, centerY + 15);
+      ctx.quadraticCurveTo(centerX, centerY + 18, centerX - 15, centerY + 14);
+      ctx.quadraticCurveTo(centerX - 23, centerY + 8, centerX - 20, centerY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Wing (floppy, droopy) — flaps around its shoulder anchor
+      const wingAngle = Math.sin(Date.now() / 80) * 0.6;
+      ctx.save();
+      ctx.translate(centerX - 8, centerY);
+      ctx.rotate(wingAngle);
+      ctx.translate(-(centerX - 8), -centerY);
+      ctx.fillStyle = '#FFA500';
+      ctx.beginPath();
+      ctx.moveTo(centerX - 8, centerY);
+      ctx.quadraticCurveTo(centerX - 28, centerY - 2, centerX - 26, centerY + 12);
+      ctx.quadraticCurveTo(centerX - 18, centerY + 10, centerX - 12, centerY + 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Left eye (bigger, wonkier)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(centerX + 5, centerY - 6, 8, 10, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Right eye (smaller, uneven)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(centerX + 18, centerY - 4, 6, 9, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Left pupil (looking different direction)
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(centerX + 3, centerY - 4, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right pupil (derpy, looking up)
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(centerX + 18, centerY - 7, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak (crooked and too long)
+      ctx.fillStyle = '#FF6B35';
+      ctx.beginPath();
+      ctx.moveTo(centerX + 20, centerY + 4);
+      ctx.lineTo(centerX + 38, centerY - 2);
+      ctx.lineTo(centerX + 36, centerY + 6);
+      ctx.lineTo(centerX + 22, centerY + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Beak line (showing it's open slightly)
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(centerX + 22, centerY + 7);
+      ctx.lineTo(centerX + 34, centerY + 2);
+      ctx.stroke();
+
+      // Little tuft of feathers on head
+      ctx.fillStyle = '#FFA500';
+      ctx.beginPath();
+      ctx.moveTo(centerX + 8, centerY - 18);
+      ctx.lineTo(centerX + 6, centerY - 25);
+      ctx.lineTo(centerX + 12, centerY - 22);
+      ctx.lineTo(centerX + 10, centerY - 28);
+      ctx.lineTo(centerX + 16, centerY - 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Feet peeking out bottom (tiny and silly)
+      ctx.fillStyle = '#FF6B35';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+
+      // Left foot
+      ctx.beginPath();
+      ctx.moveTo(centerX - 5, centerY + 15);
+      ctx.lineTo(centerX - 8, centerY + 20);
+      ctx.moveTo(centerX - 5, centerY + 15);
+      ctx.lineTo(centerX - 3, centerY + 19);
+      ctx.stroke();
+
+      // Right foot
+      ctx.beginPath();
+      ctx.moveTo(centerX + 8, centerY + 16);
+      ctx.lineTo(centerX + 6, centerY + 21);
+      ctx.moveTo(centerX + 8, centerY + 16);
+      ctx.lineTo(centerX + 11, centerY + 20);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // current pitch label
+      if (started && !gameOver) {
+        const pitch = yToPitch(y);
+        ctx.fillStyle = "rgba(233,69,96,0.85)";
+        ctx.font = "bold 11px Lucida Grande, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(pitchName(pitch), x + 24, y - 14);
+      }
+    }
+
+    // ── main loop ─────────────────────────────────────────────────────────
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
