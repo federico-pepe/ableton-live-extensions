@@ -2,7 +2,7 @@
 
 ![Chord Progression Helper](../../images/Ableton%20Extension%20-%20Chord%20Progression.png)
 
-[⬇️ Download](../../download/chord-progression-helper.ablx)
+[⬇️ Download](../../download/Chord-Progression-Helper-0.5.1.ablx)
 
 Builds chord progressions from any key and writes the result as a MIDI clip, with two distinct harmony modes for different musical styles.
 

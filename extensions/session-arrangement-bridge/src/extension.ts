@@ -8,7 +8,7 @@ import {
     type NoteDescription,
     Song,
     Track,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 
 import dialogHtml from "./dialog.html";
 
@@ -75,10 +75,9 @@ export function activate(activation: ActivationContext) {
             const initScript = `<script>window.INITIAL_DATA=${JSON.stringify(initialData).replace(/<\/script>/gi, "<\\/script>")};<\/script>`;
             const htmlWithData = dialogHtml.replace("</head>", initScript + "</head>");
 
-            const dialog = context.createModalDialog();
             let resultStr: string;
             try {
-                resultStr = await dialog.show(`data:text/html,${encodeURIComponent(htmlWithData)}`, 640, 480);
+                resultStr = await context.ui.showModalDialog(`data:text/html,${encodeURIComponent(htmlWithData)}`, 640, 480);
             } catch {
                 return;
             }
@@ -120,7 +119,7 @@ export function activate(activation: ActivationContext) {
 
                     // Add audio-specific data
                     if (track instanceof AudioTrack) {
-                        const audioClip = context.objects.getObjectFromHandle(clip.handle, AudioClip);
+                        const audioClip = context.getObjectFromHandle(clip.handle, AudioClip);
                         data.filePath = audioClip.filePath;
                         data.warping = audioClip.warping;
                         data.warpMode = audioClip.warpMode;
@@ -129,7 +128,7 @@ export function activate(activation: ActivationContext) {
 
                     // Add midi-specific data
                     if (track instanceof MidiTrack) {
-                        const midiClip = context.objects.getObjectFromHandle(clip.handle, MidiClip);
+                        const midiClip = context.getObjectFromHandle(clip.handle, MidiClip);
                         data.notes = midiClip.notes;
                     }
 
@@ -156,7 +155,7 @@ export function activate(activation: ActivationContext) {
 
 async function executeArrangement(
     context: ExtensionContext,
-    song: Song,
+    song: Song<"1.0.0">,
     tracks: Track<"1.0.0">[],
     sessionClipData: (SessionClipData | null)[][],
     allScenes: any[],
@@ -194,7 +193,7 @@ async function executeArrangement(
         return;
     }
 
-    await context.withinProgressDialog("Session to Arrangement", {}, async (update, signal) => {
+    await context.ui.withinProgressDialog("Session to Arrangement", {}, async (update, signal) => {
         // Step 3: Clear existing state
         await update("Clearing arrangement...", 0);
 
@@ -280,12 +279,12 @@ async function executeArrangement(
                                         `[Bridge] Creating audio clip (no loop): track=${trackIndex} (${track.name}), ` +
                                         `scene=${sceneIndex}, start=${sceneStart}, duration=${arrangementDuration}, file="${clipData.filePath}"`
                                     );
-                                    await track.createAudioClip(
-                                        clipData.filePath,
-                                        sceneStart,
-                                        arrangementDuration,
-                                        clipData.warping ?? true
-                                    );
+                                    await track.createAudioClip({
+                                        filePath: clipData.filePath,
+                                        startTime: sceneStart,
+                                        duration: arrangementDuration,
+                                        isWarped: clipData.warping ?? true,
+                                    });
                                 } else {
                                     // Create looping clip using just the loop bracket
                                     const loopSettings = {
@@ -301,13 +300,13 @@ async function executeArrangement(
                                         `scene=${sceneIndex}, start=${sceneStart}, duration=${arrangementDuration}, ` +
                                         `file="${clipData.filePath}", loopStart=${loopSettings.loopStart}, loopEnd=${loopSettings.loopEnd}`
                                     );
-                                    await track.createAudioClip(
-                                        clipData.filePath,
-                                        sceneStart,
-                                        arrangementDuration,
-                                        clipData.warping ?? true,
-                                        loopSettings
-                                    );
+                                    await track.createAudioClip({
+                                        filePath: clipData.filePath,
+                                        startTime: sceneStart,
+                                        duration: arrangementDuration,
+                                        isWarped: clipData.warping ?? true,
+                                        loopSettings,
+                                    });
                                 }
                             } else {
                                 // Non-looping: create clip as-is without marker settings
@@ -315,12 +314,12 @@ async function executeArrangement(
                                     `[Bridge] Creating audio clip: track=${trackIndex} (${track.name}), scene=${sceneIndex}, ` +
                                     `start=${sceneStart}, duration=${arrangementDuration}, file="${clipData.filePath}"`
                                 );
-                                await track.createAudioClip(
-                                    clipData.filePath,
-                                    sceneStart,
-                                    arrangementDuration,
-                                    clipData.warping ?? true
-                                );
+                                await track.createAudioClip({
+                                    filePath: clipData.filePath,
+                                    startTime: sceneStart,
+                                    duration: arrangementDuration,
+                                    isWarped: clipData.warping ?? true,
+                                });
                             }
 
                             // Set name, color, and warp settings

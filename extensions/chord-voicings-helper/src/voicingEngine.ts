@@ -1,5 +1,5 @@
 import { Note } from "tonal";
-import { getChordTones, getChordTonic } from "./chordDetection";
+import { getChordTones, getChordTonic } from "./chordDetection.js";
 
 export type Register = "low" | "mid" | "high";
 export type VoicingStrategy =

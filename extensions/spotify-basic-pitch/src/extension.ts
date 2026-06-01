@@ -9,14 +9,14 @@ import {
   addPitchBendsToNoteEvents,
 } from "@spotify/basic-pitch";
 import decodeAudio from "audio-decode";
-import type { Handle, NoteDescription } from "@ableton/extensions-sdk";
+import type { Handle, NoteDescription } from "@ableton-extensions/sdk";
 import {
   initialize,
   AudioClip,
   AudioTrack,
   ClipSlot,
   type ActivationContext,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export function activate(activation: ActivationContext) {
       const handle = arg as Handle;
 
       const song = context.application.song;
-      const clip = context.objects.getObjectFromHandle(handle, AudioClip);
+      const clip = context.getObjectFromHandle(handle, AudioClip);
 
       if (!clip) {
         console.error("[Basic Pitch] Could not resolve clip from handle.");
@@ -112,20 +112,20 @@ export function activate(activation: ActivationContext) {
 
       // ── Locate the clip's parent track and determine view (Session vs Arrangement)
       const clipId = clip.handle.id;
-      let parentTrack: AudioTrack | undefined;
-      let parentSlot: ClipSlot | undefined;
+      let parentTrack: AudioTrack<"1.0.0"> | undefined;
+      let parentSlot: ClipSlot<"1.0.0"> | undefined;
 
       for (const t of song.tracks) {
         // Check session clip slots
         const slot = t.clipSlots.find((cs) => cs.clip?.handle.id === clipId);
         if (slot) {
-          parentTrack = t as AudioTrack;
+          parentTrack = t as AudioTrack<"1.0.0">;
           parentSlot = slot;
           break;
         }
         // Check arrangement clips
         if (t.arrangementClips.some((c) => c.handle.id === clipId)) {
-          parentTrack = t as AudioTrack;
+          parentTrack = t as AudioTrack<"1.0.0">;
           break;
         }
       }
@@ -138,7 +138,7 @@ export function activate(activation: ActivationContext) {
       const clipName = clip.name || "Audio Clip";
       const bpm = song.tempo;
 
-      await context.withinProgressDialog(
+      await context.ui.withinProgressDialog(
         "Basic Pitch: Transcribing audio…",
         {},
         async (update, signal) => {
@@ -232,7 +232,7 @@ export function activate(activation: ActivationContext) {
 
           let lastReportedPct = 20;
           await basicPitch.evaluateModel(
-            audioBuffer,
+            audioBuffer as unknown as AudioBuffer,
             (frames: number[][], onsets: number[][], contours: number[][]) => {
               allFrames.push(...frames);
               allOnsets.push(...onsets);

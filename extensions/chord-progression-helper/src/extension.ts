@@ -3,7 +3,7 @@ import {
   MidiTrack,
   type ActivationContext,
   type Handle,
-} from "@ableton/extensions-sdk";
+} from "@ableton-extensions/sdk";
 import { Scale, Note, Interval, Chord } from "tonal";
 import dialogHtml from "./dialog.html";
 
@@ -182,7 +182,7 @@ export function activate(activation: ActivationContext) {
 
   context.commands.registerCommand("cph.open", async (arg: unknown) => {
     const handle = arg as Handle;
-    const track = context.objects.getObjectFromHandle(handle, MidiTrack);
+    const track = context.getObjectFromHandle(handle, MidiTrack);
 
     // Bake pre-computed data into the dialog HTML
     const html = dialogHtml.replace(
@@ -190,10 +190,9 @@ export function activate(activation: ActivationContext) {
       JSON.stringify(allData)
     );
 
-    const dialog = context.createModalDialog();
     let resultJson: string;
     try {
-      resultJson = await dialog.show(
+      resultJson = await context.ui.showModalDialog(
         `data:text/html,${encodeURIComponent(html)}`,
         920,
         580
@@ -228,13 +227,13 @@ export function activate(activation: ActivationContext) {
 // ── Write MIDI clip ─────────────────────────────────────────────────────────
 async function writeProgressionToTrack(
   context: ReturnType<typeof initialize>,
-  track: MidiTrack,
+  track: MidiTrack<"1.0.0">,
   progression: Array<{ name: string; roman: string; midiNotes: number[] }>
 ): Promise<void> {
   const song = context.application.song;
   const midiTrack = song.tracks.find(
     (t) => t.handle.id === track.handle.id
-  ) as MidiTrack | undefined;
+  ) as MidiTrack<"1.0.0"> | undefined;
 
   if (!midiTrack) {
     console.error("[CPH] Track not found.");

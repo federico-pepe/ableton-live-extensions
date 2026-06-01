@@ -2,7 +2,7 @@
 
 ![Duplicate Track](../../images/Ableton%20Extension%20-%20Duplicate%20Tracks.png)
 
-[⬇️ Download](../../download/duplicate-track.ablx)
+[⬇️ Download](../../download/Duplicate-Track-0.0.7.ablx)
 
 Duplicates an audio or MIDI track without copying its clips.
 

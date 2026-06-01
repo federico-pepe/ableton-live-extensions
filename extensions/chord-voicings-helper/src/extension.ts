@@ -1,7 +1,7 @@
-import type { Handle, NoteDescription } from "@ableton/extensions-sdk";
-import { initialize, MidiClip, type ActivationContext } from "@ableton/extensions-sdk";
-import { groupChordsByTime } from "./chordDetection";
-import { preserveTiming } from "./utils";
+import type { Handle, NoteDescription } from "@ableton-extensions/sdk";
+import { initialize, MidiClip, type ActivationContext } from "@ableton-extensions/sdk";
+import { groupChordsByTime } from "./chordDetection.js";
+import { preserveTiming } from "./utils.js";
 import dialogHtml from "./dialog-compiled.html";
 
 export function activate(activation: ActivationContext) {
@@ -11,7 +11,7 @@ export function activate(activation: ActivationContext) {
     "chordVoicing.openDialog",
     (args: unknown) => {
       const handle = args as Handle;
-      const clip = context.objects.getObjectFromHandle(handle, MidiClip);
+      const clip = context.getObjectFromHandle(handle, MidiClip);
       const originalNotes = clip.notes;
 
       const chordGroups = groupChordsByTime(originalNotes);
@@ -23,9 +23,8 @@ export function activate(activation: ActivationContext) {
         JSON.stringify(payload)
       );
 
-      const dialog = context.createModalDialog();
-      dialog
-        .show(`data:text/html,${encodeURIComponent(html)}`, 820, 560)
+      context.ui
+        .showModalDialog(`data:text/html,${encodeURIComponent(html)}`, 820, 560)
         .then((resultString: string) => {
           let result: {
             changes: Array<{

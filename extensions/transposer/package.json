@@ -1,18 +1,26 @@
 {
   "name": "transposer",
   "private": true,
-  "version": "0.0.1",
-  "type": "commonjs",
+  "version": "0.1.0",
+  "type": "module",
   "main": "dist/extension.js",
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
-    "build": "node esbuild.js",
-    "test": "vitest run"
+    "build": "tsc --noEmit && tsx build.ts --production",
+    "build:dev": "tsc --noEmit && tsx build.ts",
+    "start": "npm run build:dev && extensions-cli run",
+    "package": "npm run build && extensions-cli package"
   },
   "dependencies": {
-    "@ableton/extensions-sdk": "file:../../"
+    "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz"
   },
   "devDependencies": {
-    "esbuild": "^0.25.10",
-    "vitest": "^3.2.1"
+    "@ableton-extensions/cli": "file:./vendor/ableton-extensions-cli-1.0.0-beta.0.tgz",
+    "@types/node": "^25.9.1",
+    "esbuild": "0.28.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
   }
 }

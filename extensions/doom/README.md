@@ -3,7 +3,7 @@
 ![Play Doom](../../images/Ableton%20Extension%20-%20Doom.png)
 ![Play Doom 2](../../images/Ableton%20Extension%20-%20Doom%202.png)
 
-[⬇️ Download](../../download/doom.ablx)
+[⬇️ Download](../../download/Doom-0.0.2.ablx)
 
 Runs the original DOOM Shareware (1993) fully offline inside Ableton Live.
 

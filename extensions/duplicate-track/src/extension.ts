@@ -1,4 +1,4 @@
-import * as ableton from "@ableton/extensions-sdk";
+import * as ableton from "@ableton-extensions/sdk";
 
 const COMMAND_ID = "duplicate-track.duplicate-and-clear";
 
@@ -17,7 +17,7 @@ export function activate(activation: ableton.ActivationContext) {
   );
 
   context.commands.registerCommand(COMMAND_ID, async (arg: unknown) => {
-    const track = context.objects.getObjectFromHandle(
+    const track = context.getObjectFromHandle(
       arg as ableton.Handle,
       ableton.Track,
     );

@@ -1,4 +1,4 @@
-import { initialize, MidiClip, MidiTrack, AudioClip, type ActivationContext, type Handle } from "@ableton/extensions-sdk";
+import { initialize, MidiClip, MidiTrack, AudioClip, type ActivationContext, type Handle } from "@ableton-extensions/sdk";
 import dialogHtml from "./dialog.html";
 
 export function activate(activation: ActivationContext) {
@@ -6,10 +6,9 @@ export function activate(activation: ActivationContext) {
 
   context.commands.registerCommand("transposer.open", async (_arg: unknown) => {
     // Show the transposer dialog
-    const dialog = context.createModalDialog();
     let resultJson: string;
     try {
-      resultJson = await dialog.show(
+      resultJson = await context.ui.showModalDialog(
         `data:text/html,${encodeURIComponent(dialogHtml)}`,
         320,
         230
@@ -34,7 +33,7 @@ export function activate(activation: ActivationContext) {
     const song = context.application.song;
     let midiClipCount = 0;
 
-    await context.withinProgressDialog(
+    await context.ui.withinProgressDialog(
       "Transposing...",
       {},
       async (update, signal) => {
@@ -48,14 +47,14 @@ export function activate(activation: ActivationContext) {
             // Session clips
             for (const slot of track.clipSlots) {
               if (slot.clip instanceof MidiClip) {
-                transposeMidiClip(slot.clip as MidiClip, semitones);
+                transposeMidiClip(slot.clip as MidiClip<"1.0.0">, semitones);
                 midiClipCount++;
               }
             }
             // Arrangement clips
             for (const clip of track.arrangementClips) {
               if (clip instanceof MidiClip) {
-                transposeMidiClip(clip as MidiClip, semitones);
+                transposeMidiClip(clip as MidiClip<"1.0.0">, semitones);
                 midiClipCount++;
               }
             }
@@ -80,7 +79,7 @@ export function activate(activation: ActivationContext) {
   });
 
   // Right-click on any track or clip to open the transposer
-  ["AudioTrack", "MidiTrack"].forEach((scope) => {
+  (["AudioTrack", "MidiTrack"] as const).forEach((scope) => {
     context.ui.registerContextMenuAction(scope, "Transpose All Clips", "transposer.open");
   });
   context.ui.registerContextMenuAction("MidiClip", "Transpose All Clips", "transposer.open");
@@ -91,7 +90,7 @@ export function activate(activation: ActivationContext) {
  * Transpose all notes in a MidiClip by the given semitones.
  * Pitches are clamped to valid MIDI range [0, 127].
  */
-function transposeMidiClip(clip: MidiClip, semitones: number): void {
+function transposeMidiClip(clip: MidiClip<"1.0.0">, semitones: number): void {
   const notes = clip.notes;
   if (!notes || notes.length === 0) return;
   clip.notes = notes.map((note) => ({
