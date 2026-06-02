@@ -6,6 +6,8 @@
 
 Transfers all clips from Session View into Arrangement View, preserving clip properties, timing, and structure.
 
+*⚠️ Due to current limitations in the SDK, audio clips are not simply moved but are recreated from scratch, which is why they may become out of sync with the project. ⚠️*
+
 ## Features
 
 - **Two transfer modes** — Automatic (all scenes in order) or custom (drag to reorder, set repeat counts)
