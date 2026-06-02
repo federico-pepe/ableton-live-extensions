@@ -28,7 +28,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the Bird Game
 
 | Name | Description | Download | Source |
 |---|---|---|---|
-| Arrangement Helper | Builds structured arrangements with named, colored sections on a MIDI track | [⬇️ Download](download/Arrangement-Helper-0.0.8.ablx) | [🏗️ Source](extensions/arrangement-helper) |
+| Arrangement Helper | Builds structured arrangements with named, colored sections on a MIDI track. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Arrangement-Helper-0.0.8.ablx) | [🏗️ Source](extensions/arrangement-helper) |
 | Basic Pitch | Converts audio clips to MIDI using Spotify's Basic Pitch neural network, fully offline | [⬇️ Download](download/Basic-Pitch-0.1.2.ablx) | [🏗️ Source](extensions/spotify-basic-pitch) |
 | Bird Game | A just-for-fun game inspired by Flappy Bird that turns your run into a MIDI clip | [⬇️ Download](download/bird-game-1.0.0.ablx) | [🏗️ Source](extensions/bird-game) |
 | Chord Progression Helper | Builds chord progressions from any key and writes them as a MIDI clip | [⬇️ Download](download/Chord-Progression-Helper-0.5.1.ablx) | [🏗️ Source](extensions/chord-progression-helper) |
@@ -37,7 +37,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the Bird Game
 | Doom | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live | [⬇️ Download](download/Doom-0.0.2.ablx) | [🏗️ Source](extensions/doom) |
 | Duplicate Track | Duplicates a track without copying its clips | [⬇️ Download](download/Duplicate-Track-0.0.7.ablx) | [🏗️ Source](extensions/duplicate-track) |
 | Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.1.0.ablx) | [🏗️ Source](extensions/freesound-sampler) |
-| Session to Arrangement Bridge | Transfers all Session View clips into Arrangement View with full fidelity | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |
+| Session to Arrangement Bridge | Transfers all Session View clips into Arrangement View with full fidelity. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |
 | Snake | Play Snake inside Live and turn your gameplay into a MIDI clip | [⬇️ Download](download/Snake-0.0.7.ablx) | [🏗️ Source](extensions/snake) |
 | Track Creator | Creates multiple audio or MIDI tracks at once from a simple dialog | [⬇️ Download](download/Track-Creator-0.0.6.ablx) | [🏗️ Source](extensions/track-creator) |
 | Transpose Clips | Transposes every MIDI clip in the Live Set by a chosen number of semitones | [⬇️ Download](download/Transpose-Clips-0.1.0.ablx) | [🏗️ Source](extensions/transposer) |

@@ -6,6 +6,8 @@
 
 Builds a structured arrangement on a MIDI track by letting you define named sections with bar lengths and colors.
 
+*⚠️ Due to current limitations of the SDK, it is important that the clips in the Arrangement view are cut according to the length of each section. Additionally audio clips are not simply moved but are recreated from scratch, which is why they may become out of sync with the project. ⚠️*
+
 ## Features
 
 - **Create mode** — Define sections (Intro, Verse, Chorus, etc.) with custom bar lengths and colors. Each section becomes a named, colored MIDI clip on the track.
@@ -18,7 +20,7 @@ Builds a structured arrangement on a MIDI track by letting you define named sect
 2. Right-click and choose **Create Arrangement Track…**.
 3. Build your section list using the preset buttons or by editing the rows directly.
 4. Check **Create locators at section start points** to add cue points at each section boundary.
-5. Click **Apply**.
+5. Click **Create**.
 
 | Control | Description |
 |---|---|

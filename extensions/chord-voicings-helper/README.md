@@ -4,7 +4,7 @@
 
 [⬇️ Download](../../download/Chord-Voicing-Helper-1.0.2.ablx)
 
-Reads notes from a MIDI clip, detects the chord, and lets you apply a voicing strategy — with piano, staff, and guitar visualizations before you commit.
+Reads notes from a MIDI clip, detects the chord, and lets you apply a voicing strategy — with piano and staff visualizations before you commit.
 
 ## Features
 
@@ -19,8 +19,7 @@ Reads notes from a MIDI clip, detects the chord, and lets you apply a voicing st
 1. Right-click any **MIDI Clip** and choose **Edit voicings**.
 2. Select a chord candidate from the chips at the top.
 3. Choose a voicing strategy and register.
-4. Browse the Piano, Notation, Guitar, or Pitches tabs to preview the result.
-5. Click **Apply** to write the new notes back to the clip.
+4. Click **Apply** to write the new notes back to the clip.
 
 | Strategy | Description |
 |---|---|
