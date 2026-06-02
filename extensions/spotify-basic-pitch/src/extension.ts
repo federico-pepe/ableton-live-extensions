@@ -91,6 +91,39 @@ function secondsToBeats(seconds: number, bpm: number): number {
   return (seconds / 60) * bpm;
 }
 
+/**
+ * Show a simple modal error dialog. Never throws — failures here must not
+ * re-trigger the unhandledRejection crash this dialog exists to report.
+ */
+async function showErrorDialog(
+  ui: { showModalDialog(url: string, width: number, height: number): Promise<string> },
+  title: string,
+  message: string,
+): Promise<void> {
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html =
+    `<!doctype html><html><head><meta charset="utf-8"><style>` +
+    `body{font:13px -apple-system,system-ui,sans-serif;margin:0;padding:20px;background:#2b2b2b;color:#e0e0e0}` +
+    `h1{font-size:14px;margin:0 0 12px;color:#ff7a7a}` +
+    `p{margin:0 0 18px;line-height:1.5}` +
+    `button{font:13px system-ui;padding:6px 18px;border:0;border-radius:4px;background:#5a5a5a;color:#fff;cursor:pointer}` +
+    `button:hover{background:#6a6a6a}` +
+    `</style></head><body>` +
+    `<h1>${esc(title)}</h1><p>${esc(message)}</p>` +
+    `<button onclick="closeDialog()">OK</button>` +
+    `<script>function closeDialog(){var m={method:"close_and_send",params:[""]};` +
+    `if(window.webkit&&window.webkit.messageHandlers)window.webkit.messageHandlers.live.postMessage(m);` +
+    `else if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(m);}</script>` +
+    `</body></html>`;
+  const url = "data:text/html;charset=utf-8," + encodeURIComponent(html);
+  try {
+    await ui.showModalDialog(url, 460, 220);
+  } catch {
+    // Already logged by the caller; nothing more we can do.
+  }
+}
+
 // ─── Extension ───────────────────────────────────────────────────────────────
 
 export function activate(activation: ActivationContext) {
@@ -102,6 +135,7 @@ export function activate(activation: ActivationContext) {
     async (arg: unknown) => {
       const handle = arg as Handle;
 
+      try {
       const song = context.application.song;
       const clip = context.getObjectFromHandle(handle, AudioClip);
 
@@ -180,7 +214,21 @@ export function activate(activation: ActivationContext) {
           const audioExt = path.extname(audioFilePath).toLowerCase();
           if (audioExt !== ".wav") {
             const wavPath = audioFilePath.replace(/\.[^.]+$/, ".wav");
-            execFileSync("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEF32", audioFilePath, wavPath]);
+            try {
+              execFileSync("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEF32", audioFilePath, wavPath]);
+            } catch {
+              // Ableton stores some Session samples as AIFF-C with its proprietary
+              // "able" codec (header: FORM…AIFC…able). CoreAudio (afconvert/afinfo)
+              // can't decode it, so the copy-the-source approach fails with a
+              // cryptic 'fmt?' error. The Arrangement path renders through Live's
+              // own engine and is unaffected — steer the user there.
+              throw new Error(
+                "Couldn't decode this clip's audio. Its sample is stored in " +
+                "Ableton's compressed format, which can't be read directly. " +
+                "Move the clip to the Arrangement view and run \"Convert to MIDI\" " +
+                "there, or consolidate/export the clip to a WAV first.",
+              );
+            }
             audioFilePath = wavPath;
           }
 
@@ -361,6 +409,19 @@ export function activate(activation: ActivationContext) {
           );
         },
       );
+      } catch (err) {
+        // The withinProgressDialog promise rejects on any failure inside the
+        // callback (afconvert, decode, inference, …). Without this catch the
+        // rejection propagates out of the command handler as an
+        // unhandledRejection, which terminates the extension host process.
+        if (err instanceof Error && err.name === "AbortError") {
+          // User cancelled the progress dialog — not an error.
+          return;
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[Basic Pitch] Conversion failed: ${message}`);
+        await showErrorDialog(context.ui, "Basic Pitch", message);
+      }
     },
   );
 
