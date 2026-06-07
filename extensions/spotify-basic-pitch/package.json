@@ -1,7 +1,7 @@
 {
   "name": "basic-pitch-midi",
   "private": true,
-  "version": "0.1.3",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/extension.js",
   "engines": { "node": ">=22.11.0" },
