@@ -124,6 +124,35 @@ async function showErrorDialog(
   }
 }
 
+/**
+ * Copies a file outside Node's --allow-fs-read/write sandbox
+ * by spawning a system command (PowerShell on Windows, cp on Mac/Unix).
+ */
+function copyFileSandboxBypass(srcPath: string, destPath: string): void {
+  if (process.platform === "win32") {
+    execFileSync("powershell.exe", [
+      "-NoProfile",
+      "-Command",
+      `Copy-Item -LiteralPath '${srcPath.replace(/'/g, "''")}' -Destination '${destPath.replace(/'/g, "''")}' -Force`
+    ]);
+  } else {
+    execFileSync("/bin/cp", ["-f", srcPath, destPath]);
+  }
+}
+
+/**
+ * Reads a file outside Node's --allow-fs-read sandbox by spawning a system
+ * command to write it to stdout (PowerShell on Windows, cat on Mac/Unix).
+ */
+function readFileSandboxBypass(filePath: string): Buffer {
+  if (process.platform === "win32") {
+    const command = `$stdout = [System.Console]::OpenStandardOutput(); [System.IO.File]::OpenRead('${filePath.replace(/'/g, "''")}').CopyTo($stdout); $stdout.Close()`;
+    return execFileSync("powershell.exe", ["-NoProfile", "-Command", command], { maxBuffer: 512 * 1024 * 1024 });
+  } else {
+    return execFileSync("/bin/cat", [filePath], { maxBuffer: 512 * 1024 * 1024 });
+  }
+}
+
 // ─── Extension ───────────────────────────────────────────────────────────────
 
 export function activate(activation: ActivationContext) {
@@ -190,7 +219,7 @@ export function activate(activation: ActivationContext) {
             const ext = path.extname(srcPath) || ".audio";
             const tempDir = context.environment.tempDirectory!;
             const tmpFile = path.join(tempDir, `bp-input${ext}`);
-            execFileSync("/bin/cp", ["-f", srcPath, tmpFile]);
+            copyFileSandboxBypass(srcPath, tmpFile);
             audioFilePath = tmpFile;
             console.log(`[Basic Pitch] Session clip → copied to temp: ${tmpFile}`);
           } else {
@@ -213,29 +242,39 @@ export function activate(activation: ActivationContext) {
           // Convert to WAV via afconvert (macOS built-in) if needed.
           const audioExt = path.extname(audioFilePath).toLowerCase();
           if (audioExt !== ".wav") {
-            const wavPath = audioFilePath.replace(/\.[^.]+$/, ".wav");
-            try {
-              execFileSync("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEF32", audioFilePath, wavPath]);
-            } catch {
-              // Ableton stores some Session samples as AIFF-C with its proprietary
-              // "able" codec (header: FORM…AIFC…able). CoreAudio (afconvert/afinfo)
-              // can't decode it, so the copy-the-source approach fails with a
-              // cryptic 'fmt?' error. The Arrangement path renders through Live's
-              // own engine and is unaffected — steer the user there.
-              throw new Error(
-                "Couldn't decode this clip's audio. Its sample is stored in " +
-                "Ableton's compressed format, which can't be read directly. " +
-                "Move the clip to the Arrangement view and run \"Convert to MIDI\" " +
-                "there, or consolidate/export the clip to a WAV first.",
-              );
+            if (process.platform === "win32") {
+              // On Windows, audio-decode can handle MP3/FLAC/OGG directly.
+              // For other formats (like AIFF), throw a clean error since we don't have afconvert.
+              if (audioExt !== ".mp3" && audioExt !== ".ogg" && audioExt !== ".flac") {
+                throw new Error(
+                  `Unsupported audio format (${audioExt}) on Windows. Please consolidate or export the clip to a WAV first.`
+                );
+              }
+            } else {
+              const wavPath = audioFilePath.replace(/\.[^.]+$/, ".wav");
+              try {
+                execFileSync("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEF32", audioFilePath, wavPath]);
+              } catch {
+                // Ableton stores some Session samples as AIFF-C with its proprietary
+                // "able" codec (header: FORM…AIFC…able). CoreAudio (afconvert/afinfo)
+                // can't decode it, so the copy-the-source approach fails with a
+                // cryptic 'fmt?' error. The Arrangement path renders through Live's
+                // own engine and is unaffected — steer the user there.
+                throw new Error(
+                  "Couldn't decode this clip's audio. Its sample is stored in " +
+                  "Ableton's compressed format, which can't be read directly. " +
+                  "Move the clip to the Arrangement view and run \"Convert to MIDI\" " +
+                  "there, or consolidate/export the clip to a WAV first.",
+                );
+              }
+              audioFilePath = wavPath;
             }
-            audioFilePath = wavPath;
           }
 
           // fs.readFileSync is blocked by Node's --allow-fs-read permission model
           // for paths outside the extension install dir (e.g. temp/rendered files).
-          // Spawn /bin/cat to read the file — same bypass used for the cp above.
-          const rawBuffer = execFileSync("/bin/cat", [audioFilePath], { maxBuffer: 512 * 1024 * 1024 });
+          // Spawn /bin/cat (or powershell on Windows) to read the file — same bypass used for the cp above.
+          const rawBuffer = readFileSandboxBypass(audioFilePath);
           const decoded = await decodeAudio(rawBuffer);
           const mono = toMono(decoded);
           const audioBuffer = resampleTo22050(mono);
