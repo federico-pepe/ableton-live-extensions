@@ -17,7 +17,7 @@ import wlibzipWasm from "../assets/emulators/wlibzip.wasm";
 import doomBundle from "../assets/doom.jsdos";
 
 // Bump when any bundled asset changes so a fresh copy is written.
-const RUNTIME_DIR = "ableton-doom-runtime-1";
+const RUNTIME_DIR = "ableton-doom-runtime=1";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -33,15 +33,36 @@ const MIME: Record<string, string> = {
  * directory and returns that directory. Everything is local — at runtime the
  * directory is served over http://localhost, so js-dos loads its emulator core
  * (wdosbox/wlibzip) from "./emulators/" without any network access.
+ *
+ * js-dos.css and js-dos.js are inlined directly into doom.html rather than
+ * served as separate files. Two Windows-specific issues make this necessary:
+ *
+ * 1. The replacement uses a function (not a string) because js-dos.js contains
+ *    the literal text "$&" in its minified source. String.prototype.replace
+ *    expands "$&" to the matched text, which would splice the search string
+ *    back into the output and inject stray </script> tags.
+ *
+ * 2. The inlined script is wrapped in an IIFE. Ableton's WebView2 process
+ *    exposes V8's gc() function as a page global (via --expose-gc), and
+ *    js-dos.js declares a top-level `const gc`. Since const cannot redeclare
+ *    an existing binding, this throws a SyntaxError before window.Dos is
+ *    assigned. The IIFE gives js-dos its own scope, avoiding the conflict.
  */
 function writeRuntime(baseDir: string): string {
   const dir = path.join(baseDir, RUNTIME_DIR);
   const emuDir = path.join(dir, "emulators");
   fs.mkdirSync(emuDir, { recursive: true });
 
-  fs.writeFileSync(path.join(dir, "doom.html"), doomHtml);
-  fs.writeFileSync(path.join(dir, "js-dos.js"), jsDosJs);
-  fs.writeFileSync(path.join(dir, "js-dos.css"), jsDosCss);
+  const inlinedHtml = doomHtml
+    .replace(
+      '<link rel="stylesheet" href="./js-dos.css">',
+      () => `<style>\n${jsDosCss}\n</style>`
+    )
+    .replace(
+      '<script src="./js-dos.js"></script>',
+      () => `<script>\n(function(){\n${jsDosJs}\n})();\n</script>`
+    );
+  fs.writeFileSync(path.join(dir, "doom.html"), inlinedHtml);
   fs.writeFileSync(path.join(dir, "doom.jsdos"), Buffer.from(doomBundle, "base64"));
 
   fs.writeFileSync(path.join(emuDir, "emulators.js"), emulatorsJs);
@@ -57,42 +78,53 @@ function writeRuntime(baseDir: string): string {
 let serverBaseUrl: string | null = null;
 
 /**
- * Serves `rootDir` over http://127.0.0.1 on an ephemeral port. A localhost
+ * Serves `rootDir` over http://localhost on an ephemeral port. A localhost
  * server (rather than file://) is required because WKWebView blocks fetch/XHR
  * and Web Workers for file:// sub-resources — and js-dos loads its wasm core
  * exactly that way. The SDK explicitly allows the http://localhost scheme.
+ *
+ * We bind on both 127.0.0.1 (IPv4) and ::1 (IPv6) so the server is reachable
+ * regardless of whether the platform resolves "localhost" to IPv4 or IPv6.
+ * On Windows, WebView2 resolves localhost to ::1; binding only on 127.0.0.1
+ * causes fetch() calls for .wasm and .jsdos files to fail there.
  */
 function ensureServer(rootDir: string): Promise<string> {
   if (serverBaseUrl) return Promise.resolve(serverBaseUrl);
   const root = path.resolve(rootDir);
-  return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
-      const rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
-      const rel = rawPath === "/" ? "doom.html" : rawPath.replace(/^\/+/, "");
-      const filePath = path.resolve(root, rel);
-      // Path-traversal guard: never serve outside the runtime directory.
-      if (filePath !== root && !filePath.startsWith(root + path.sep)) {
-        res.statusCode = 403;
-        res.end("Forbidden");
+
+  const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
+    const rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    const rel = rawPath === "/" ? "doom.html" : rawPath.replace(/^\/+/, "");
+    const filePath = path.resolve(root, rel);
+    // Path-traversal guard: never serve outside the runtime directory.
+    if (filePath !== root && !filePath.startsWith(root + path.sep)) {
+      res.statusCode = 403;
+      res.end("Forbidden");
+      return;
+    }
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.statusCode = 404;
+        res.end("Not found");
         return;
       }
-      fs.readFile(filePath, (err, data) => {
-        if (err) {
-          res.statusCode = 404;
-          res.end("Not found");
-          return;
-        }
-        res.setHeader("Content-Type", MIME[path.extname(filePath)] || "application/octet-stream");
-        res.end(data);
-      });
+      res.setHeader("Content-Type", MIME[path.extname(filePath)] || "application/octet-stream");
+      res.end(data);
     });
-    server.on("error", reject);
-    // Bind to loopback only; port 0 picks a free ephemeral port.
-    server.listen(0, "127.0.0.1", () => {
-      const addr = server.address();
+  };
+
+  return new Promise((resolve, reject) => {
+    const server4 = http.createServer(handler);
+    server4.on("error", reject);
+    server4.listen(0, "127.0.0.1", () => {
+      const addr = server4.address();
       const port = typeof addr === "object" && addr ? addr.port : 0;
       serverBaseUrl = `http://localhost:${port}`;
-      resolve(serverBaseUrl);
+      // Also bind on IPv6 loopback for WebView2 on Windows (resolves localhost → ::1).
+      // Silently ignore errors (e.g. IPv6 disabled) — IPv4 is sufficient on those hosts.
+      const server6 = http.createServer(handler);
+      server6.listen(port, "::1", () => resolve(serverBaseUrl!));
+      server6.on("error", () => resolve(serverBaseUrl!));
     });
   });
 }

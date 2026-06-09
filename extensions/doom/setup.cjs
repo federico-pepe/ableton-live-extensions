@@ -58,8 +58,10 @@ function fetchJsDosFromNpm() {
   console.log(`  js-dos ${JSDOS_VERSION}: npm pack...`);
   const tgz = execFileSync("npm", ["pack", `js-dos@${JSDOS_VERSION}`, "--pack-destination", tmp], {
     encoding: "utf8",
+    shell: true, // npm is npm.cmd on Windows; shell true lets the OS resolve it
   }).trim().split("\n").pop().trim();
-  execFileSync("tar", ["xzf", path.join(tmp, tgz), "-C", tmp]);
+  // Use cwd + relative filename so Windows tar doesn't misread "C:" as a hostname.
+  execFileSync("tar", ["xzf", tgz, "-C", "."], { cwd: tmp });
   fs.mkdirSync(EMU_DIR, { recursive: true });
   for (const [src, dst] of JSDOS_FILES) {
     fs.copyFileSync(path.join(tmp, "package", src), path.join(ASSETS_DIR, dst));

@@ -1,7 +1,7 @@
 {
   "name": "doom",
   "private": true,
-  "version": "0.0.2",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/extension.js",
   "engines": { "node": ">=22.11.0" },

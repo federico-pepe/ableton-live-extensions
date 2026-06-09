@@ -30,11 +30,11 @@ A big thank you to **Rain** and **Jackie** for helping me building the Bird Game
 |---|---|---|---|
 | Arrangement Helper | Builds structured arrangements with named, colored sections on a MIDI track. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Arrangement-Helper-0.0.8.ablx) | [🏗️ Source](extensions/arrangement-helper) |
 | Basic Pitch | Converts audio clips to MIDI using Spotify's Basic Pitch neural network, fully offline (macOS & Windows) | [⬇️ Download](download/Basic-Pitch-1.0.0.ablx) | [🏗️ Source](extensions/spotify-basic-pitch) |
-| Bird Game | A just-for-fun game inspired by Flappy Bird that turns your run into a MIDI clip | [⬇️ Download](download/bird-game-1.0.0.ablx) | [🏗️ Source](extensions/bird-game) |
+| Bird Game | A just-for-fun game inspired by Flappy Bird that turns your run into a MIDI clip (macOS & Windows) | [⬇️ Download](download/bird-game-1.1.0.ablx) | [🏗️ Source](extensions/bird-game) |
 | Chord Progression Helper | Builds chord progressions from any key and writes them as a MIDI clip | [⬇️ Download](download/Chord-Progression-Helper-0.5.1.ablx) | [🏗️ Source](extensions/chord-progression-helper) |
 | Chord Voicing Helper | Detects chords in a MIDI clip and lets you apply and preview voicing strategies | [⬇️ Download](download/Chord-Voicing-Helper-1.0.2.ablx) | [🏗️ Source](extensions/chord-voicings-helper) |
 | ChromaFlux | Randomizes Instrument Rack parameters with configurable mode and intensity | [⬇️ Download](download/ChromaFlux-0.0.7.ablx) | [🏗️ Source](extensions/chroma-flux) |
-| Doom | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live | [⬇️ Download](download/Doom-0.0.2.ablx) | [🏗️ Source](extensions/doom) |
+| Doom | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live (macOS & Windows) | [⬇️ Download](download/Doom-1.0.0.ablx) | [🏗️ Source](extensions/doom) |
 | Duplicate Track | Duplicates a track without copying its clips | [⬇️ Download](download/Duplicate-Track-0.0.7.ablx) | [🏗️ Source](extensions/duplicate-track) |
 | Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.1.0.ablx) | [🏗️ Source](extensions/freesound-sampler) |
 | Session to Arrangement Bridge | Transfers all Session View clips into Arrangement View with full fidelity. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |

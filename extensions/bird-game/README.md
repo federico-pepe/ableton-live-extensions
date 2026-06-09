@@ -2,9 +2,9 @@
 
 ![Bird Game](../../images/Ableton%20Extension%20-%20Bird%20Game.png)
 
-[⬇️ Download](../../download/bird-game-1.0.0.ablx)
+[⬇️ Download](../../download/bird-game-1.1.0.ablx)
 
-An extension built purely for fun, inspired by the original Flappy Bird game. Flap through the pipes inside Ableton Live and turn your run into a MIDI clip.
+An extension built purely for fun, inspired by the original Flappy Bird game. Flap through the pipes inside Ableton Live and turn your run into a MIDI clip. Works on both macOS and Windows.
 
 A big thank you to **Rain** and **Jackie** for helping me make this work and look so beautiful.
 

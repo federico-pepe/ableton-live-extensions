@@ -319,7 +319,7 @@
         if (typeof Dos === "undefined") {
           showError(
             "js-dos runtime failed to load.",
-            "The extension could not write js-dos.js to its temp folder."
+            "The js-dos runtime did not initialize. Check the extension host logs for details."
           );
           return;
         }

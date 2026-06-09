@@ -14,5 +14,5 @@ await esbuild.build({
   logLevel: "info",
   minify: production,
   sourcemap: !production,
-  loader: { ".html": "text", ".aif": "base64" },
+  loader: { ".html": "text", ".mp3": "base64" },
 });
