@@ -67,12 +67,6 @@ web_modules/
 # Optional REPL history
 .node_repl_history
 
-# Output of 'npm pack'
-*.tgz
-# ...but keep the vendored Ableton Extensions SDK + CLI so the repo builds from a clean clone
-!extensions/*/vendor/
-!extensions/*/vendor/*.tgz
-
 # Yarn Integrity file
 .yarn-integrity
 
