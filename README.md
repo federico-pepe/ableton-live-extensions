@@ -36,7 +36,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the **Bird Ga
 | ChromaFlux | Randomizes Instrument Rack parameters with configurable mode and intensity | [⬇️ Download](download/ChromaFlux-0.0.7.ablx) | [🏗️ Source](extensions/chroma-flux) |
 | Doom | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live (macOS & Windows) | [⬇️ Download](download/Doom-1.0.0.ablx) | [🏗️ Source](extensions/doom) |
 | Duplicate Track | Duplicates a track without copying its clips | [⬇️ Download](download/Duplicate-Track-0.0.7.ablx) | [🏗️ Source](extensions/duplicate-track) |
-| Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.3.2.ablx) | [🏗️ Source](extensions/freesound-sampler) |
+| Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.3.4.ablx) | [🏗️ Source](extensions/freesound-sampler) |
 | Session to Arrangement Bridge | Transfers all Session View clips into Arrangement View with full fidelity. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |
 | Snake | Play Snake inside Live and turn your gameplay into a MIDI clip | [⬇️ Download](download/Snake-0.0.7.ablx) | [🏗️ Source](extensions/snake) |
 | Track Creator | Creates multiple audio or MIDI tracks at once from a simple dialog | [⬇️ Download](download/Track-Creator-0.0.6.ablx) | [🏗️ Source](extensions/track-creator) |
