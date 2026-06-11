@@ -24,7 +24,20 @@ interface DialogResult {
   id: number;
   duration: number;
   license: string;
+  licenseShort: string;
+  soundPageUrl: string;
   _apiKey: string;
+}
+
+interface ImportRecord {
+  id: number;
+  name: string;
+  username: string;
+  license: string;
+  soundPageUrl: string;
+  trackName: string;
+  sessionId: string;
+  importedAt: string;
 }
 
 interface ArrangementSelectionArg {
@@ -74,6 +87,45 @@ async function saveApiKey(
   );
 }
 
+// ── Import ledger persistence ───────────────────────────────────────────────
+
+function importsFilePath(storageDir: string): string {
+  return path.join(storageDir, "freesound-imports.json");
+}
+
+async function loadImports(
+  storageDir: string | undefined,
+): Promise<ImportRecord[]> {
+  if (!storageDir) return [];
+  try {
+    const raw = await fs.readFile(importsFilePath(storageDir), "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as ImportRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function appendImport(
+  storageDir: string | undefined,
+  record: ImportRecord,
+): Promise<void> {
+  if (!storageDir) return;
+  const existing = await loadImports(storageDir);
+  // Avoid duplicate entries for the same sound within the same session.
+  const isDup = existing.some(
+    (e) => e.id === record.id && e.sessionId === record.sessionId,
+  );
+  if (isDup) return;
+  existing.push(record);
+  await fs.mkdir(storageDir, { recursive: true });
+  await fs.writeFile(
+    importsFilePath(storageDir),
+    JSON.stringify(existing, null, 2),
+    "utf8",
+  );
+}
+
 // ── Filename sanitization ─────────────────────────────────────────────────────
 
 function sanitizeFilename(input: string, maxLength = 80): string {
@@ -91,11 +143,13 @@ function sanitizeFilename(input: string, maxLength = 80): string {
 
 async function findExistingDownload(
   dir: string,
-  baseName: string,
+  soundId: number,
 ): Promise<string | null> {
   try {
     const entries = await fs.readdir(dir);
-    const match = entries.find((e) => e.startsWith(baseName + "."));
+    // Files are named `<name>_FS<id>.<ext>`, so match on the stable ID token.
+    const token = `_FS${soundId}.`;
+    const match = entries.find((e) => e.includes(token));
     return match ? path.join(dir, match) : null;
   } catch {
     return null;
@@ -196,6 +250,9 @@ function makeErrorHtml(message: string): string {
 export async function activate(activation: ActivationContext) {
   const context: ExtensionContext = initialize(activation, "1.0.0");
 
+  // One id per extension run — used to group imported sounds for attribution.
+  const sessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
   for (const scope of ["AudioTrack", "AudioTrack.ArrangementSelection"] as const) {
     context.ui.registerContextMenuAction(scope, "Find samples", "freesound.open");
   }
@@ -259,10 +316,11 @@ export async function activate(activation: ActivationContext) {
       console.log("[freesound-sampler] Storage dir:", storageDir);
       console.log("[freesound-sampler] Sounds dir:", soundsDir);
 
-      // Load and inject saved API key into dialog
+      // Load and inject saved API key + import ledger into dialog
       const savedApiKey = await loadSavedApiKey(storageDir);
       console.log("[freesound-sampler] Loaded API key:", savedApiKey ? savedApiKey.substring(0, 5) + "..." : "NONE");
-      const initData = { savedApiKey };
+      const imports = await loadImports(storageDir);
+      const initData = { savedApiKey, imports, sessionId };
       const initScript = `<script>window.INITIAL_DATA=${JSON.stringify(initData).replace(/<\/script>/gi, "<\\/script>")};<\/script>`;
       const html = dialogHtml.replace("</head>", initScript + "</head>");
 
@@ -272,8 +330,8 @@ export async function activate(activation: ActivationContext) {
         console.log("[freesound-sampler] Opening dialog...");
         raw = await context.ui.showModalDialog(
           `data:text/html,${encodeURIComponent(html)}`,
-          560,
-          410,
+          640,
+          620,
         );
         console.log("[freesound-sampler] Dialog closed, result:", raw.substring(0, 100));
       } catch (err) {
@@ -308,12 +366,13 @@ export async function activate(activation: ActivationContext) {
             signal.throwIfAborted();
             await update("Downloading audio…", 10);
 
-            const baseName = sanitizeFilename(result!.name);
+            // Include the Freesound ID in the filename so imports stay traceable.
+            const baseName = `${sanitizeFilename(result!.name)}_FS${result!.id}`;
             console.log("[freesound-sampler] Base name:", baseName);
             console.log("[freesound-sampler] Preview URL:", result!.previewUrl);
 
-            // Reuse an already-downloaded file if present
-            const existing = await findExistingDownload(soundsDir, baseName);
+            // Reuse an already-downloaded file if present (matched by sound ID)
+            const existing = await findExistingDownload(soundsDir, result!.id);
             if (existing) {
               console.log("[freesound-sampler] File already exists:", existing);
               await update("File already downloaded, reusing…", 50);
@@ -353,8 +412,23 @@ export async function activate(activation: ActivationContext) {
             }
 
             console.log("[freesound-sampler] Clip created:", clip.name);
+            // Encode sound ID + license into the clip name for traceability.
+            const suffix = ` [FS#${result!.id} · ${result!.licenseShort}]`;
+            const clipName = result!.name.slice(0, 64 - suffix.length) + suffix;
             context.withinTransaction(() => {
-              clip.name = result!.name.slice(0, 64);
+              clip.name = clipName;
+            });
+
+            // Record the import in the attribution ledger.
+            await appendImport(storageDir, {
+              id: result!.id,
+              name: result!.name,
+              username: result!.username,
+              license: result!.license,
+              soundPageUrl: result!.soundPageUrl,
+              trackName: track.name,
+              sessionId,
+              importedAt: new Date().toISOString(),
             });
 
             await update("Done!", 100);

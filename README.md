@@ -20,7 +20,7 @@ You can read more about Ableton Extensions here:
 
 I built most of these extensions with the help of *Claude Code* handling most of the heavy lifting on the code side. If that makes you uneasy or you're not on board with that approach, no worries at all. Either way, thanks a lot for taking the time to check it out.
 
-A big thank you to **Rain** and **Jackie** for helping me building the Bird Game extension and make it look so good.
+A big thank you to **Rain** and **Jackie** for helping me building the **Bird Game** extension and make it look so good. Thank you Glau @glaurossi for making **Doom** compatible with Windows. **Freesound Sampler** is developed in collaboration with feedback from Frederic Font Corbera @ffont the Freesound lead developer.
 
 ---
 
@@ -36,7 +36,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the Bird Game
 | ChromaFlux | Randomizes Instrument Rack parameters with configurable mode and intensity | [⬇️ Download](download/ChromaFlux-0.0.7.ablx) | [🏗️ Source](extensions/chroma-flux) |
 | Doom | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live (macOS & Windows) | [⬇️ Download](download/Doom-1.0.0.ablx) | [🏗️ Source](extensions/doom) |
 | Duplicate Track | Duplicates a track without copying its clips | [⬇️ Download](download/Duplicate-Track-0.0.7.ablx) | [🏗️ Source](extensions/duplicate-track) |
-| Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.1.0.ablx) | [🏗️ Source](extensions/freesound-sampler) |
+| Freesound Sampler | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-0.3.2.ablx) | [🏗️ Source](extensions/freesound-sampler) |
 | Session to Arrangement Bridge | Transfers all Session View clips into Arrangement View with full fidelity. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |
 | Snake | Play Snake inside Live and turn your gameplay into a MIDI clip | [⬇️ Download](download/Snake-0.0.7.ablx) | [🏗️ Source](extensions/snake) |
 | Track Creator | Creates multiple audio or MIDI tracks at once from a simple dialog | [⬇️ Download](download/Track-Creator-0.0.6.ablx) | [🏗️ Source](extensions/track-creator) |
