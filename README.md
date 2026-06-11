@@ -1,5 +1,9 @@
 # Ableton Live Extensions Experiments
 
+![Ableton Live Extensions](/images/Ableton-Extensions.png)
+
+🖥️ [Watch my introductory video on YouTube](https://www.youtube.com/watch?v=_izRiBGngGI)
+
 *Break what's expected. Make Live your own.* 
 
 Extensions are a new way to enhance Live's capabilities with powerful tools that can speed up your workflow by automating repetitive tasks, sparkle or scramble new ideas and even more.
