@@ -3,7 +3,7 @@
 ![Freesound Sampler](../../images/Ableton%20Extension%20-%20FreeSound%20Sampler.png)
 ![Freesound Sampler 2](../../images/Ableton%20Extension%20-%20FreeSound%20Sampler%202.png)
 
-[⬇️ Download](../../download/Freesound-Sampler-0.3.2.ablx)
+[⬇️ Download](../../download/Freesound-Sampler-0.3.4.ablx)
 
 Search Freesound and download sounds directly into your Ableton Live tracks.
 

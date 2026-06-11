@@ -20,7 +20,7 @@
     :root {
       /* Freesound brand — signature red + navy on a light ground (matches freesound.org) */
       --fs-accent:       #ff3546;
-      --fs-accent-dim:   #c8293a;
+      --fs-accent-dim:   #ff3546;
       --fs-accent-glow:  rgba(255, 53, 70, 0.12);
 
       /* Light theme */
@@ -213,6 +213,19 @@
       outline: none;
     }
 
+    select:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--fs-text-mid);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .check-row input { accent-color: var(--fs-accent); cursor: pointer; }
+
     input::placeholder { color: var(--fs-text-dim); font-size: 10px; }
 
     .bpm-pair { display: flex; gap: 5px; align-items: center; }
@@ -277,8 +290,9 @@
     }
 
     .btn.primary:hover:not(:disabled) {
-      background: var(--fs-accent-dim);
-      border-color: var(--fs-accent-dim);
+      background: var(--fs-accent);
+      border-color: var(--fs-accent);
+      filter: brightness(0.92);
     }
 
     /* ── Footer ── */
@@ -353,16 +367,10 @@
       border-left-color: var(--fs-accent);
     }
 
-    .card-thumbs {
+    .card-thumb {
       flex-shrink: 0;
       width: 72px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .card-thumb {
-      width: 72px;
-      height: 22px;
+      height: 34px;
       object-fit: cover;
       background: var(--fs-bg-sunken);
       border-radius: 2px;
@@ -650,6 +658,10 @@
 
     <div class="divider"></div>
 
+    <label class="check-row results-toolbar">
+      <input type="checkbox" id="show-spec" onchange="onToggleSpec()" /> Show spectrograms
+    </label>
+
     <div id="results-list">
       <div class="empty-state hidden" id="no-results-msg">
         No sounds found.<br>Try a different query or broader filters.
@@ -722,9 +734,10 @@
         <strong>Freesound</strong> is a collaborative, online database of Creative Commons licensed
         sounds — browse, share and reuse hundreds of thousands of sounds at
         <span class="about-link">freesound.org</span>. Please respect each sound's license and
-        credit its creator when required.
+        credit its creator when required. Freesound is a project of the Music Technology Group of
+        Universitat Pompeu Fabra and Fundació Phonos.
       </p>
-      <p class="about-meta">Version <span id="about-version">0.3.2</span></p>
+      <p class="about-meta">Version <span id="about-version">0.3.4</span></p>
     </div>
 
     <div class="status" id="about-status"></div>
@@ -1017,23 +1030,19 @@
       var card = document.createElement("div");
       card.className = "result-card";
 
-      // Waveform + spectrogram thumbnails, stacked
+      // Thumbnail — waveform by default, spectrogram when the option is enabled
       var imgs = sound.images || {};
       var waveUrl = imgs.waveform_m || imgs.waveform_l;
       var specUrl = imgs.spectral_m || imgs.spectral_l;
-      if (waveUrl || specUrl) {
-        var thumbs = document.createElement("div");
-        thumbs.className = "card-thumbs";
-        [waveUrl, specUrl].forEach(function(u) {
-          if (!u) return;
-          var img = document.createElement("img");
-          img.className = "card-thumb";
-          img.loading = "lazy";
-          img.src = u;
-          img.onerror = function() { img.style.display = "none"; };
-          thumbs.appendChild(img);
-        });
-        card.appendChild(thumbs);
+      var wantSpec = document.getElementById("show-spec").checked;
+      var thumbUrl = wantSpec ? (specUrl || waveUrl) : (waveUrl || specUrl);
+      if (thumbUrl) {
+        var thumb = document.createElement("img");
+        thumb.className = "card-thumb";
+        thumb.loading = "lazy";
+        thumb.src = thumbUrl;
+        thumb.onerror = function() { thumb.style.display = "none"; };
+        card.appendChild(thumb);
       }
 
       var body = document.createElement("div");
@@ -1143,6 +1152,18 @@
 
     // ── Search flow + pagination ──────────────────────────────────────
     var paginationState = { filters: null, currentPage: 1, hasMore: false };
+    var loadedSounds = [];
+
+    function renderResults() {
+      var list = document.getElementById("results-list");
+      list.innerHTML = "";
+      loadedSounds.forEach(function(sound) { list.appendChild(renderCard(sound)); });
+    }
+
+    // Re-render in place when the spectrogram/waveform toggle changes.
+    function onToggleSpec() {
+      if (loadedSounds.length) renderResults();
+    }
 
     async function startSearch() {
       var f = collectFilters();
@@ -1158,9 +1179,8 @@
           return;
         }
         showPage("page-results");
-        var list = document.getElementById("results-list");
-        list.innerHTML = "";
-        data.results.forEach(function(sound) { list.appendChild(renderCard(sound)); });
+        loadedSounds = data.results.slice();
+        renderResults();
 
         paginationState.filters = f;
         paginationState.currentPage = 1;
@@ -1191,7 +1211,11 @@
           return;
         }
         var list = document.getElementById("results-list");
-        data.results.forEach(function(sound) { list.appendChild(renderCard(sound)); });
+        // Append only the new page so the scroll position is preserved.
+        data.results.forEach(function(sound) {
+          loadedSounds.push(sound);
+          list.appendChild(renderCard(sound));
+        });
         paginationState.currentPage = nextPage;
         paginationState.hasMore = data.next ? true : false;
         if (!paginationState.hasMore) btn.style.display = "none";

@@ -12,11 +12,11 @@
     "package": "npm run build && extensions-cli package"
   },
   "dependencies": {
-    "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz",
+    "@ableton-extensions/sdk": "file:../../ableton-extensions-sdk-1.0.0-beta.0.tgz",
     "tonal": "^4.8.0"
   },
   "devDependencies": {
-    "@ableton-extensions/cli": "file:./vendor/ableton-extensions-cli-1.0.0-beta.0.tgz",
+    "@ableton-extensions/cli": "file:../../ableton-extensions-cli-1.0.0-beta.0.tgz",
     "@types/node": "^25.9.1",
     "esbuild": "0.28.0",
     "tsx": "^4.19.0",
