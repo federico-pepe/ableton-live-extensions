@@ -482,6 +482,19 @@
       font-size: 11px;
     }
 
+    /* ── Auth row ── */
+    .auth-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      font-size: 10.5px;
+      color: var(--fs-text-dim);
+      gap: 8px;
+    }
+    .auth-row .auth-label { flex: 1; }
+    .auth-row .auth-label.logged-in { color: var(--fs-text); }
+
     /* ── Licensing note ── */
     .license-note {
       font-size: 10px;
@@ -540,6 +553,11 @@
     </div>
 
     <div class="divider"></div>
+
+    <div class="auth-row">
+      <span class="auth-label" id="auth-label">Not logged in</span>
+      <button class="btn" id="auth-btn" onclick="handleAuth()">Log in with Freesound</button>
+    </div>
 
     <div class="license-note">
       Sounds on Freesound are licensed under Creative Commons. Check each sound's license and
@@ -635,7 +653,7 @@
       </div>
       <div class="filter-grid hidden" id="adv-grid"></div>
 
-      <div class="apikey-row">
+      <div class="apikey-row" id="apikey-row">
         <label class="label" for="apikey">API key <span style="color:var(--fs-text-dim);font-weight:400">(optional — freesound.org/apiv2)</span></label>
         <input type="password" id="apikey" placeholder="Increases rate limits" />
       </div>
@@ -737,7 +755,7 @@
         credit its creator when required. Freesound is a project of the Music Technology Group of
         Universitat Pompeu Fabra and Fundació Phonos.
       </p>
-      <p class="about-meta">Version <span id="about-version">0.3.4</span></p>
+      <p class="about-meta">Version <span id="about-version">1.0.0</span></p>
     </div>
 
     <div class="status" id="about-status"></div>
@@ -935,6 +953,35 @@
       };
     }
 
+    // ── OAuth / auth state ────────────────────────────────────────────
+    var ACCESS_TOKEN = null;
+    var LOGGED_IN = false;
+
+    function updateAuthUI() {
+      var label = document.getElementById("auth-label");
+      var btn = document.getElementById("auth-btn");
+      var apikeyRow = document.getElementById("apikey-row");
+      if (LOGGED_IN) {
+        label.textContent = "Logged in with Freesound";
+        label.classList.add("logged-in");
+        btn.textContent = "Log out";
+        if (apikeyRow) apikeyRow.classList.add("hidden");
+      } else {
+        label.textContent = "Not logged in";
+        label.classList.remove("logged-in");
+        btn.textContent = "Log in with Freesound";
+        if (apikeyRow) apikeyRow.classList.remove("hidden");
+      }
+    }
+
+    function handleAuth() {
+      if (LOGGED_IN) {
+        sendResult({ _action: "oauth_logout" });
+      } else {
+        sendResult({ _action: "oauth_start" });
+      }
+    }
+
     // ── Freesound API search ──────────────────────────────────────────
     var FIELDS = "id,name,url,duration,previews,images,username,license,tags," +
       "category,subcategory,type,bpm,tonality,note_name,num_downloads,avg_rating,samplerate,channels,description";
@@ -966,11 +1013,17 @@
     async function searchFreesound(f, page) {
       var params = new URLSearchParams({
         query: f.query,
-        token: f.apiKey,
         fields: FIELDS,
         page_size: "15",
         page: String(page)
       });
+      // Use Bearer token when logged in; fall back to API key query param otherwise.
+      var fetchHeaders = {};
+      if (ACCESS_TOKEN) {
+        fetchHeaders["Authorization"] = "Bearer " + ACCESS_TOKEN;
+      } else if (f.apiKey) {
+        params.set("token", f.apiKey);
+      }
       var clauses = buildFilterClauses(f);
       if (clauses.length > 0) params.set("filter", clauses.join(" "));
       if (f.sortBy) params.set("sort", f.sortBy);
@@ -978,16 +1031,20 @@
       var url = "https://freesound.org/apiv2/search/text/?" + params.toString();
       console.log("[Freesound] Searching:", url);
 
-      var resp = await fetch(url);
+      var resp = await fetch(url, { headers: fetchHeaders });
       if (resp.status === 429) {
         await new Promise(function(r) { setTimeout(r, 2000); });
-        resp = await fetch(url);
+        resp = await fetch(url, { headers: fetchHeaders });
       }
       if (!resp.ok) {
         var errText = await resp.text();
         console.error("[Freesound] Error response:", resp.status, errText);
         if (resp.status === 401) {
-          throw new Error("Invalid or empty API key. Please check your key at freesound.org/apiv2");
+          throw new Error(
+            ACCESS_TOKEN
+              ? "Freesound session expired. Please log out and log in again."
+              : "Invalid or empty API key. Please check your key at freesound.org/apiv2"
+          );
         }
         var detail = "";
         try { detail = JSON.parse(errText).detail || ""; } catch (e) { /* not JSON */ }
@@ -1144,6 +1201,7 @@
           license: sound.license || "Creative Commons 0",
           licenseShort: licenseShort(sound.license || "Creative Commons 0"),
           soundPageUrl: pageUrl,
+          type: sound.type || "wav",
           _apiKey: document.getElementById("apikey").value
         });
       };
@@ -1296,7 +1354,10 @@
         .replace(/url\(#([^)]+)\)/g, 'url(#$1_' + i + ')');
     }
 
-    var INITIAL_DATA = (window.INITIAL_DATA) || { savedApiKey: "", imports: [], sessionId: "" };
+    var INITIAL_DATA = (window.INITIAL_DATA) || { savedApiKey: "", imports: [], sessionId: "", loggedIn: false, accessToken: null };
+
+    LOGGED_IN = INITIAL_DATA.loggedIn || false;
+    ACCESS_TOKEN = INITIAL_DATA.accessToken || null;
 
     document.querySelectorAll(".fs-logo").forEach(function(el, i) {
       el.innerHTML = uniqueLogo(FS_LOGO_SVG, i) + '<span class="fs-tag">Sampler</span>';
@@ -1305,6 +1366,7 @@
     document.getElementById("apikey").value = INITIAL_DATA.savedApiKey || "";
     IMPORTS = Array.isArray(INITIAL_DATA.imports) ? INITIAL_DATA.imports : [];
     SESSION_ID = INITIAL_DATA.sessionId || "";
+    updateAuthUI();
     document.getElementById("query").focus();
   </script>
 </body>

@@ -1,7 +1,7 @@
 {
   "name": "freesound-sampler",
   "private": true,
-  "version": "0.3.4",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/extension.js",
   "engines": { "node": ">=22.11.0" },
