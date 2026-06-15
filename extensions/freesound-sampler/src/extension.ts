@@ -67,6 +67,9 @@ function isArrangementSelection(arg: unknown): arg is ArrangementSelectionArg {
   );
 }
 
+// ── Version ───────────────────────────────────────────────────────────────────
+const VERSION = "1.1.3";
+
 // ── OAuth constants ────────────────────────────────────────────────────────────
 // TODO: Replace with the client_id from your registered Public Freesound app.
 // Register at https://freesound.org/apiv2/apply/ — select "Public" client type.
@@ -460,9 +463,11 @@ function makeErrorHtml(message: string): string {
 </html>`;
 }
 
-// ── OAuth paste-code dialog HTML ──────────────────────────────────────────────
+// ── OAuth combined dialog HTML ────────────────────────────────────────────────
+// Single dialog: shows the auth URL button + paste field so the user never
+// needs to press Escape to advance between steps.
 
-function makePasteCodeHtml(): string {
+function makeOAuthHtml(authUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -475,7 +480,7 @@ function makePasteCodeHtml(): string {
     }
     :root {
       --bg: #ffffff; --accent: #ff3546; --text: #141424;
-      --border: #dcdce6; --text-dim: #8a8a9c; --raised: #f4f4fa;
+      --border: #dcdce6; --text-dim: #8a8a9c; --raised: #f4f4fa; --sunken: #eeeef6;
     }
     html, body {
       background: var(--bg);
@@ -483,47 +488,73 @@ function makePasteCodeHtml(): string {
       color: var(--text); margin: 0; height: 100vh;
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
-      padding: 24px; box-sizing: border-box; font-size: 11.5px;
+      padding: 28px; box-sizing: border-box; font-size: 11.5px;
     }
-    .wrap { width: 100%; max-width: 400px; }
-    h2 { font-size: 13px; margin: 0 0 6px; font-weight: 700; }
-    p { font-size: 11px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.6; }
+    .wrap { width: 100%; max-width: 420px; }
+    h2 { font-size: 13px; margin: 0 0 18px; font-weight: 700; }
+    .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+    .step-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-body { flex: 1; }
+    .step-label { font-size: 11px; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
+    .open-btn {
+      font-family: inherit; font-size: 11px; border-radius: 2px;
+      border: none; padding: 6px 14px; cursor: pointer;
+      background: var(--accent); color: #fff; font-weight: 700;
+    }
+    .open-btn:hover { opacity: 0.88; }
+    .copy-status { font-size: 10px; color: var(--text-dim); margin-top: 6px; min-height: 14px; }
     input {
       width: 100%; border: 1px solid var(--border); border-radius: 3px;
       padding: 8px 10px; font-family: inherit; font-size: 11px;
-      color: var(--text); background: var(--raised);
+      color: var(--text); background: var(--sunken);
       box-sizing: border-box; outline: none;
     }
     input:focus { border-color: var(--accent); }
-    .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .row { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
     button {
       font-family: inherit; font-size: 11px; border-radius: 2px;
       border: none; padding: 6px 14px; cursor: pointer;
     }
-    .primary { background: var(--accent); color: #fff; }
+    .primary { background: var(--accent); color: #fff; font-weight: 700; }
     .secondary { background: var(--border); color: var(--text); }
-    .err { font-size: 10.5px; margin-top: 8px; color: var(--accent); min-height: 14px; }
+    .err { font-size: 10.5px; margin-top: 6px; color: var(--accent); min-height: 14px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h2>Paste your authorization code</h2>
-    <p>
-      After granting access on Freesound, copy the authorization code shown on the page
-      and paste it below to complete login.
-    </p>
-    <input
-      type="text" id="code-input"
-      placeholder="Authorization code"
-      autocomplete="off" spellcheck="false"
-    />
-    <div id="err" class="err"></div>
+    <h2>Connect with Freesound</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-label">Click the button below to copy the authorization URL, then paste it into your browser. Log in with your Freesound account and authorize this extension.</div>
+        <button class="open-btn" onclick="copyUrl()">Copy Authorization URL</button>
+        <div class="copy-status" id="copy-status"></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-label">Once authorized, Freesound will show you an authorization code. Copy it and paste it here.</div>
+        <input type="text" id="code-input" placeholder="Authorization code" autocomplete="off" spellcheck="false" />
+        <div id="err" class="err"></div>
+      </div>
+    </div>
+
     <div class="row">
       <button class="secondary" onclick="doCancel()">Cancel</button>
       <button class="primary" onclick="doConnect()">Connect</button>
     </div>
   </div>
   <script>
+    var AUTH_URL = ${JSON.stringify(authUrl)};
     function postMsg(value) {
       var msg = { method: "close_and_send", params: [JSON.stringify(value)] };
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
@@ -531,6 +562,17 @@ function makePasteCodeHtml(): string {
       } else if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage(msg);
       }
+    }
+    function copyUrl() {
+      var ta = document.createElement("textarea");
+      ta.value = AUTH_URL;
+      ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, AUTH_URL.length);
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      document.getElementById("copy-status").textContent = ok ? "URL copied to clipboard." : "Could not copy automatically.";
     }
     function doCancel() { postMsg(null); }
     function doConnect() {
@@ -571,23 +613,14 @@ async function runOAuthFlow(
     "&state=" + encodeURIComponent(state) +
     "&scope=read";
 
-  // Step 1: Show the Freesound authorization page in the modal. After the user
-  // grants access, Freesound redirects to the OOB permission-granted page which
-  // displays the authorization code. The user copies it and closes the modal.
-  try {
-    await context.ui.showModalDialog(authUrl.toString(), 640, 700);
-  } catch {
-    // Normal: the modal closes when the redirect lands on the permission page
-    // (or the user cancels). Either way, proceed to the paste step.
-  }
-
-  // Step 2: Prompt the user to paste the code they just copied.
+  // Single dialog: shows the auth URL button + paste field so the user never
+  // needs to close one modal and wait for the next.
   let raw: string;
   try {
     raw = await context.ui.showModalDialog(
-      `data:text/html,${encodeURIComponent(makePasteCodeHtml())}`,
-      480,
-      260,
+      `data:text/html,${encodeURIComponent(makeOAuthHtml(authUrl))}`,
+      520,
+      360,
     );
   } catch {
     return false;
@@ -601,7 +634,7 @@ async function runOAuthFlow(
   }
   if (!pasted?.code) return false;
 
-  // Step 3: Exchange the authorization code for tokens (no client_secret needed).
+  // Exchange the authorization code for tokens (no client_secret needed with PKCE).
   try {
     const tokens = await exchangeCode(pasted.code.trim(), verifier);
     await saveTokens(storageDir, tokens);
@@ -717,6 +750,7 @@ export async function activate(activation: ActivationContext) {
           sessionId,
           loggedIn: !!accessToken,
           accessToken: accessToken ?? null,
+          version: VERSION,
         };
         const initScript = `<script>window.INITIAL_DATA=${JSON.stringify(initData).replace(/<\/script>/gi, "<\\/script>")};<\/script>`;
         const html = dialogHtml.replace("</head>", initScript + "</head>");

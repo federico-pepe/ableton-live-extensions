@@ -653,15 +653,13 @@
       </div>
       <div class="filter-grid hidden" id="adv-grid"></div>
 
-      <div class="apikey-row" id="apikey-row">
-        <label class="label" for="apikey">API key <span style="color:var(--fs-text-dim);font-weight:400">(optional — freesound.org/apiv2)</span></label>
-        <input type="password" id="apikey" placeholder="Increases rate limits" />
-      </div>
+      <input type="hidden" id="apikey" value="" />
     </div>
 
     <div class="status" id="search-status"></div>
 
     <div class="footer">
+      <button class="btn" id="inspire-btn" style="margin-right: auto;" onclick="inspireMe()">🎲 Inspire Me</button>
       <button class="btn primary" id="search-btn" onclick="startSearch()">Search</button>
       <button class="btn" onclick="cancel()">Cancel</button>
     </div>
@@ -758,11 +756,6 @@
       <p class="about-meta">Version <span id="about-version">1.0.0</span></p>
     </div>
 
-    <div class="status" id="about-status"></div>
-
-    <div class="footer">
-      <button class="btn primary" onclick="copyToClipboard('https://freesound.org', 'about-status')">Copy freesound.org link</button>
-    </div>
   </div>
 
   <textarea id="clipboard-helper" style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true"></textarea>
@@ -960,17 +953,16 @@
     function updateAuthUI() {
       var label = document.getElementById("auth-label");
       var btn = document.getElementById("auth-btn");
-      var apikeyRow = document.getElementById("apikey-row");
       if (LOGGED_IN) {
         label.textContent = "Logged in with Freesound";
         label.classList.add("logged-in");
         btn.textContent = "Log out";
-        if (apikeyRow) apikeyRow.classList.add("hidden");
+        btn.classList.remove("primary");
       } else {
         label.textContent = "Not logged in";
         label.classList.remove("logged-in");
         btn.textContent = "Log in with Freesound";
-        if (apikeyRow) apikeyRow.classList.remove("hidden");
+        btn.classList.add("primary");
       }
     }
 
@@ -1043,7 +1035,7 @@
           throw new Error(
             ACCESS_TOKEN
               ? "Freesound session expired. Please log out and log in again."
-              : "Invalid or empty API key. Please log in with your Freesound account or grab an API key at freesound.org/apiv2/apply"
+              : "Invalid or empty API key. Please log in with your Freesound account."
           );
         }
         var detail = "";
@@ -1334,6 +1326,56 @@
       copyToClipboard(buildAttributionText(), "attr-status");
     }
 
+    // ── Inspire Me ────────────────────────────────────────────────────
+    // Fetches a single random sound (empty query, random page 1–70000) and
+    // imports it directly without showing the results page.
+    async function inspireMe() {
+      var btn = document.getElementById("inspire-btn");
+      btn.disabled = true;
+      btn.textContent = "🎲 Finding…";
+      setStatus("search-status", "", false);
+      try {
+        var page = Math.floor(Math.random() * 70000) + 1;
+        var params = new URLSearchParams({
+          query: "",
+          fields: FIELDS,
+          page_size: "1",
+          page: String(page)
+        });
+        var fetchHeaders = {};
+        if (ACCESS_TOKEN) {
+          fetchHeaders["Authorization"] = "Bearer " + ACCESS_TOKEN;
+        } else {
+          var apiKey = document.getElementById("apikey").value;
+          if (apiKey) params.set("token", apiKey);
+        }
+        var resp = await fetch("https://freesound.org/apiv2/search/text/?" + params.toString(), { headers: fetchHeaders });
+        if (resp.status === 401) throw new Error(ACCESS_TOKEN ? "Session expired. Please log out and log in again." : "Please login with your Freesound account");
+        if (!resp.ok) throw new Error("Freesound API error: HTTP " + resp.status);
+        var data = await resp.json();
+        if (!data.results || data.results.length === 0) throw new Error("No results — try again.");
+        var sound = data.results[0];
+        var pageUrl = sound.url || ("https://freesound.org/s/" + sound.id + "/");
+        stopPreview();
+        sendResult({
+          previewUrl: (sound.previews || {})["preview-hq-mp3"] || (sound.previews || {})["preview-lq-mp3"] || "",
+          name: sound.name,
+          username: sound.username,
+          id: sound.id,
+          duration: sound.duration,
+          license: sound.license || "Creative Commons 0",
+          licenseShort: licenseShort(sound.license || "Creative Commons 0"),
+          soundPageUrl: pageUrl,
+          type: sound.type || "wav",
+          _apiKey: document.getElementById("apikey").value
+        });
+      } catch (err) {
+        setStatus("search-status", "Inspire Me failed: " + err.message, true);
+        btn.disabled = false;
+        btn.textContent = "🎲 Inspire Me";
+      }
+    }
+
     // ── Keyboard ──────────────────────────────────────────────────────
     document.addEventListener("keydown", function(e) {
       if (e.key === "Escape") cancel();
@@ -1363,9 +1405,9 @@
       el.innerHTML = uniqueLogo(FS_LOGO_SVG, i) + '<span class="fs-tag">Sampler</span>';
     });
     populateFilters();
-    document.getElementById("apikey").value = INITIAL_DATA.savedApiKey || "";
     IMPORTS = Array.isArray(INITIAL_DATA.imports) ? INITIAL_DATA.imports : [];
     SESSION_ID = INITIAL_DATA.sessionId || "";
+    document.getElementById("about-version").textContent = INITIAL_DATA.version || "";
     updateAuthUI();
     document.getElementById("query").focus();
   </script>

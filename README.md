@@ -40,7 +40,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the **Bird Ga
 | ChromaFlux | 0.0.7 | Randomizes Instrument Rack parameters with configurable mode and intensity | [⬇️ Download](download/ChromaFlux-0.0.7.ablx) | [🏗️ Source](extensions/chroma-flux) |
 | Doom | 1.0.0 | Runs the original DOOM Shareware (1993) fully offline inside Ableton Live (macOS & Windows) | [⬇️ Download](download/Doom-1.0.0.ablx) | [🏗️ Source](extensions/doom) |
 | Duplicate Track | 0.0.7 | Duplicates a track without copying its clips | [⬇️ Download](download/Duplicate-Track-0.0.7.ablx) | [🏗️ Source](extensions/duplicate-track) |
-| Freesound Sampler ✨ | 1.0.0 | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-1.0.0.ablx) | [🏗️ Source](extensions/freesound-sampler) |
+| Freesound Sampler ✨ | 1.1.3 | Searches Freesound.org and downloads sounds directly into your tracks | [⬇️ Download](download/Freesound-Sampler-1.1.3.ablx) | [🏗️ Source](extensions/freesound-sampler) |
 | Session to Arrangement Bridge | 0.0.8 | Transfers all Session View clips into Arrangement View with full fidelity. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Session-to-Arrangement-Bridge-0.0.8.ablx) | [🏗️ Source](extensions/session-arrangement-bridge) |
 | Snake | 0.0.7 | Play Snake inside Live and turn your gameplay into a MIDI clip | [⬇️ Download](download/Snake-0.0.7.ablx) | [🏗️ Source](extensions/snake) |
 | Track Creator | 0.0.6 | Creates multiple audio or MIDI tracks at once from a simple dialog | [⬇️ Download](download/Track-Creator-0.0.6.ablx) | [🏗️ Source](extensions/track-creator) |
@@ -52,10 +52,16 @@ A big thank you to **Rain** and **Jackie** for helping me building the **Bird Ga
 
 # Changelog
 
+## June 15, 2026
+
+### Freesound Sampler 1.1.3
+- **Inspire Me** — Click **Inspire Me** to pick a random search term and instantly discover unexpected sounds
+- **OAuth login** - Improved workflow. Removed API Key field.
+
 ## June 12, 2026
 
 ### Freesound Sampler 1.0.0
-- **oAuth login** — Log in with your Freesound account directly from the extension; no manual API key needed
+- **OAuth login** — Log in with your Freesound account directly from the extension; no manual API key needed
 - **Original quality downloads** — When logged in, sounds are downloaded in their original format (WAV, FLAC, AIFF, …) instead of MP3 previews
 - **Attribution helper** — The Attributions view lists imported sounds with a one-click copy for crediting creators
 - **Advanced search filters** — Filter by timbre descriptors (brightness, warmth, roughness, etc.), key, BPM, duration, license, and more

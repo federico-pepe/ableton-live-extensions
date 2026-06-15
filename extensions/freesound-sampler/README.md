@@ -3,7 +3,7 @@
 ![Freesound Sampler](../../images/Ableton%20Extension%20-%20FreeSound%20Sampler.png)
 ![Freesound Sampler 2](../../images/Ableton%20Extension%20-%20FreeSound%20Sampler%202.png)
 
-[⬇️ Download](../../download/Freesound-Sampler-1.0.0.ablx)
+[⬇️ Download](../../download/Freesound-Sampler-1.1.3.ablx)
 
 Search Freesound and download sounds directly into your Ableton Live tracks.
 
@@ -20,6 +20,7 @@ Search Freesound and download sounds directly into your Ableton Live tracks.
 - **License-aware** — Filter by Creative Commons license and see each sound's license, with a reminder of your attribution obligations
 - **Traceable imports** — Clip names and downloaded files carry the Freesound sound ID and license (e.g. `Kick [FS#12345 · CC-BY]`)
 - **Attribution helper** — The **Attributions** view lists imported sounds and offers a one-click **Copy attribution text** for crediting creators
+- **Inspire Me** — Click **Inspire Me** to pick a random search term and instantly discover unexpected sounds
 - **Cached downloads** — Already downloaded a sound? The local file is reused automatically
 
 > Tip: Key, BPM and timbre rely on Freesound's audio analysis, so they only match analyzed sounds and work best combined with a Category.
@@ -27,7 +28,7 @@ Search Freesound and download sounds directly into your Ableton Live tracks.
 ## How to use
 
 1. Right-click any **Audio Track** (or an audio lane in Arrangement View) and choose **Find samples**.
-2. Click **Log in with Freesound** and follow the login steps (grant access on Freesound, copy the authorization code shown, paste it back into the extension).
+2. Click **Log in with Freesound**, then click **Copy Authorization URL** and paste it into your browser. Log in with your Freesound account, authorize the extension, and copy the authorization code shown. Paste it back into the extension and click **Connect**.
 3. Enter a search query (e.g., "drums", "pad", "vintage") and click **Search**.
 4. Press ▶ on any result to preview it, then click the card to download and import the clip.
 
