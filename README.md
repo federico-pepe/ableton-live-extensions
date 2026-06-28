@@ -33,7 +33,7 @@ A big thank you to **Rain** and **Jackie** for helping me building the **Bird Ga
 | Name | Version | Description | Download | Source |
 |---|---|---|---|---|
 | Arrangement Helper | 0.0.8 | Builds structured arrangements with named, colored sections on a MIDI track. *⚠️ Please read the current known limitations in the extension's README file.* | [⬇️ Download](download/Arrangement-Helper-0.0.8.ablx) | [🏗️ Source](extensions/arrangement-helper) |
-| Basic Pitch | 1.0.0 | Converts audio clips to MIDI using Spotify's Basic Pitch neural network, fully offline (macOS & Windows) | [⬇️ Download](download/Basic-Pitch-1.0.0.ablx) | [🏗️ Source](extensions/spotify-basic-pitch) |
+| Basic Pitch | 1.0.1 | Converts audio clips to MIDI using Spotify's Basic Pitch neural network, fully offline (macOS & Windows) | [⬇️ Download](download/Basic-Pitch-1.0.1.ablx) | [🏗️ Source](extensions/spotify-basic-pitch) |
 | Bird Game | 1.1.0 | A just-for-fun game inspired by Flappy Bird that turns your run into a MIDI clip (macOS & Windows) | [⬇️ Download](download/bird-game-1.1.0.ablx) | [🏗️ Source](extensions/bird-game) |
 | Chord Progression Helper | 0.5.1 | Builds chord progressions from any key and writes them as a MIDI clip | [⬇️ Download](download/Chord-Progression-Helper-0.5.1.ablx) | [🏗️ Source](extensions/chord-progression-helper) |
 | Chord Voicing Helper | 1.0.2 | Detects chords in a MIDI clip and lets you apply and preview voicing strategies | [⬇️ Download](download/Chord-Voicing-Helper-1.0.2.ablx) | [🏗️ Source](extensions/chord-voicings-helper) |
