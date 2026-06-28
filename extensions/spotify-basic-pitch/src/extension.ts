@@ -206,7 +206,7 @@ export function activate(activation: ActivationContext) {
         {},
         async (update, signal) => {
           // ── Step 1: Get the audio file path ──────────────────────────────
-          update("Reading audio…", 5);
+          await update("Reading audio…", 5);
 
           let audioFilePath: string;
 
@@ -224,7 +224,7 @@ export function activate(activation: ActivationContext) {
             console.log(`[Basic Pitch] Session clip → copied to temp: ${tmpFile}`);
           } else {
             // Arrangement View: render pre-fx audio from the timeline
-            update("Rendering audio from timeline…", 10);
+            await update("Rendering audio from timeline…", 10);
             audioFilePath = await context.resources.renderPreFxAudio(
               parentTrack,
               clip.startTime,
@@ -236,7 +236,7 @@ export function activate(activation: ActivationContext) {
           signal.throwIfAborted();
 
           // ── Step 2: Decode the audio file ────────────────────────────────
-          update("Decoding audio file…", 15);
+          await update("Decoding audio file…", 15);
 
           // audio-decode only handles WAV/MP3/OGG/FLAC — not AIFF.
           // Convert to WAV via afconvert (macOS built-in) if needed.
@@ -288,7 +288,12 @@ export function activate(activation: ActivationContext) {
           signal.throwIfAborted();
 
           // ── Step 3: Run Basic Pitch inference ────────────────────────────
-          update("Running Basic Pitch model…", 20);
+          // Passing `undefined` for progress puts the dialog in indeterminate
+          // mode. Live animates that bar on its own UI thread, so it keeps moving
+          // even while the synchronous TF.js inference below blocks Node's thread
+          // (a numeric percentage would freeze, since our update() IPC can't reach
+          // Live until evaluateModel returns).
+          await update("Transcribing… (speed depends on clip length & CPU)", undefined);
 
           // Load the model from the bundled model directory using tf.io.fromMemory
           // so we don't depend on file:// URL support in the extension host.
@@ -317,7 +322,9 @@ export function activate(activation: ActivationContext) {
           const allOnsets: number[][] = [];
           const allContours: number[][] = [];
 
-          let lastReportedPct = 20;
+          // The per-batch progress callback is a no-op: our update() IPC can't
+          // reach Live mid-inference (thread blocked), and the indeterminate bar
+          // set above already conveys ongoing activity.
           await basicPitch.evaluateModel(
             audioBuffer as unknown as AudioBuffer,
             (frames: number[][], onsets: number[][], contours: number[][]) => {
@@ -325,19 +332,13 @@ export function activate(activation: ActivationContext) {
               allOnsets.push(...onsets);
               allContours.push(...contours);
             },
-            (pct: number) => {
-              const displayPct = 20 + Math.round(pct * 65); // 20–85%
-              if (displayPct > lastReportedPct) {
-                lastReportedPct = displayPct;
-                update(`Running Basic Pitch model… (${Math.round(pct * 100)}%)`, displayPct);
-              }
-            },
+            () => {},
           );
 
           signal.throwIfAborted();
 
           // ── Step 4: Extract note events ──────────────────────────────────
-          update("Extracting notes…", 87);
+          await update("Extracting notes…", 87);
 
           const rawNotes = outputToNotesPoly(
             allFrames,
@@ -356,14 +357,14 @@ export function activate(activation: ActivationContext) {
           console.log(`[Basic Pitch] Detected ${noteEvents.length} note events.`);
 
           if (noteEvents.length === 0) {
-            update("No notes detected.", 100);
+            await update("No notes detected.", 100);
             return;
           }
 
           signal.throwIfAborted();
 
           // ── Step 5: Calculate MIDI note timing ───────────────────────────
-          update("Building MIDI clip…", 90);
+          await update("Building MIDI clip…", 90);
 
           // For arrangement clips the MIDI clip should start at the same
           // arrangement position as the audio clip.
@@ -394,7 +395,7 @@ export function activate(activation: ActivationContext) {
           signal.throwIfAborted();
 
           // ── Step 6: Create MIDI track + clip ─────────────────────────────
-          update("Creating MIDI track…", 93);
+          await update("Creating MIDI track…", 93);
 
           const midiTrack = await song.createMidiTrack();
 
@@ -426,7 +427,7 @@ export function activate(activation: ActivationContext) {
           signal.throwIfAborted();
 
           // ── Step 7: Write notes ──────────────────────────────────────────
-          update("Writing notes…", 97);
+          await update("Writing notes…", 97);
 
           // Note startTimes must be relative to the MIDI clip start, not the arrangement.
           // Session clips: subtract the first note's beat (clip starts at note 0).
@@ -441,7 +442,7 @@ export function activate(activation: ActivationContext) {
             midiClip.notes = finalNotes;
           });
 
-          update(`Done! Created ${noteEvents.length} notes.`, 100);
+          await update(`Done! Created ${noteEvents.length} notes.`, 100);
           console.log(
             `[Basic Pitch] ✓ Created MIDI track "${midiTrack.name}" ` +
             `with ${noteEvents.length} notes.`,
